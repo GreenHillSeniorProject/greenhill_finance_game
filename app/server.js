@@ -1,5 +1,6 @@
 const mysql = require("mysql");
 const config = require("../config.json");
+const express = require("express");
 
 const db = mysql.createConnection({
     host: "database-1.cpjwwrmrh8mc.us-east-1.rds.amazonaws.com",
@@ -16,3 +17,7 @@ db.connect((err)=>{
         console.log("successful connection to database");
     }
 })
+
+// express.get((req, res) => {
+//     res.send("hello");
+// })
