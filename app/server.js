@@ -6,12 +6,12 @@ const db = mysql.createConnection({
     port: "3306",
     user: config.user,
     password: config.password,
-    databse: ""
+    databse: "mydb"
 });
 
 db.connect((err)=>{
     if(err){
         console.log("Ran into an error");
     }
-    console.log("successful connection");
+    console.log("successful connection to database");
 })
