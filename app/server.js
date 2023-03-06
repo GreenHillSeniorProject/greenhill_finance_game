@@ -21,11 +21,17 @@ db.connect((err)=>{
     }
 });
 
+app.post("/insert/:admin_id", (req, res) => {
+    let admin_id = req.params.admin_id;
+});
+
 app.get("/select", (req, res) => {
     db.query("SELECT * FROM mydb.Admin", function (err, result, fields) {
         if (err) throw err;
         res.send(result);
     });
+
+    
 });
 
 app.get("/update", (req, res) => {
@@ -36,7 +42,14 @@ app.get("/update", (req, res) => {
 });
 
 app.get("/insert", (req, res) => {
-    db.query("INSERT INTO mydb.Admin (first_name, last_name, email) VALUES ('Server2', 'Test', 'cool@gmool.com')", function (err, result, fields) {
+    db.query("INSERT INTO mydb.Admin (first_name, last_name, email) VALUES ('Server', 'Test', 'cool@gmool.com')", function (err, result, fields) {
+        if (err) throw err;
+        res.send(result);
+    });
+});
+
+app.get("/delete", (req, res) => {
+    db.query("DELETE FROM mydb.Admin where first_name='Server2'", function (err, result, fields) {
         if (err) throw err;
         res.send(result);
     });
