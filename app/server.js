@@ -1,6 +1,9 @@
 const mysql = require("mysql");
 const config = require("../config.json");
 const express = require("express");
+let port = config.port;
+let hostname = config.host;
+let app = express();
 
 const db = mysql.createConnection({
     host: "database-1.cpjwwrmrh8mc.us-east-1.rds.amazonaws.com",
@@ -18,6 +21,10 @@ db.connect((err)=>{
     }
 })
 
-// express.get((req, res) => {
-//     res.send("hello");
-// })
+app.get("/", (req, res) => {
+    res.sendFile("hello");
+})
+
+app.listen(port, hostname, () => {
+    console.log(`http://${hostname}:${port}`);
+});
