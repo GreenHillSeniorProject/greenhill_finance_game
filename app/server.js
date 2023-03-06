@@ -35,6 +35,14 @@ app.get("/update", (req, res) => {
     });
 });
 
+app.get("/insert", (req, res) => {
+    db.query("INSERT INTO mydb.Admin (first_name, last_name, email) VALUES ('Server2', 'Test', 'cool@gmool.com')", function (err, result, fields) {
+        if (err) throw err;
+        res.send(result);
+    });
+});
+
+
 app.listen(port, hostname, () => {
     console.log(`http://${hostname}:${port}`);
 });
