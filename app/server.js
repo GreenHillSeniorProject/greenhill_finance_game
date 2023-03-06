@@ -28,12 +28,12 @@ app.get("/select", (req, res) => {
     });
 });
 
-// app.get("/update", (req, res) => {
-//     db.query("UPDATE * mydb.Admin SET first_name = 'Tested' WHERE amdin_id=4", function (err, result, fields) {
-//         if (err) throw err;
-//         res.send(result);
-//     });
-// });
+app.get("/update", (req, res) => {
+    db.query("UPDATE mydb.Admin SET first_name = 'Tested' WHERE admin_id=4", function (err, result, fields) {
+        if (err) throw err;
+        res.send(result);
+    });
+});
 
 app.listen(port, hostname, () => {
     console.log(`http://${hostname}:${port}`);
