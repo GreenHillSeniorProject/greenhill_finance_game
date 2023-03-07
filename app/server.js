@@ -1,15 +1,15 @@
 const mysql = require("mysql");
 const config = require("../config.json");
 const express = require("express");
-let port = config.port;
-let hostname = config.host;
+let host_port = config.host_port;
+let hostname = config.hostname;
 let app = express();
 
 const db = mysql.createConnection({
-    host: "database-1.cpjwwrmrh8mc.us-east-1.rds.amazonaws.com",
-    port: "3306",
-    user: config.user,
-    password: config.password,
+    host: config.db_hostname,
+    port: config.db_port,
+    user: config.db_user,
+    password: config.db_password,
     databse: "mydb"
 });
 
@@ -22,7 +22,11 @@ db.connect((err)=>{
 });
 
 app.post("/insert/:admin_id", (req, res) => {
-    let admin_id = req.params.admin_id;
+
+    let email = req.params.email;
+    let first_name = req.params.first_name;
+    let last_name = req.params.last_name;
+    console.log(admin_id);
 });
 
 app.get("/select", (req, res) => {
@@ -30,8 +34,6 @@ app.get("/select", (req, res) => {
         if (err) throw err;
         res.send(result);
     });
-
-    
 });
 
 app.get("/update", (req, res) => {
@@ -46,16 +48,17 @@ app.get("/insert", (req, res) => {
         if (err) throw err;
         res.send(result);
     });
+    res.sendFile(__dirname, '/public/insert.html');
 });
 
 app.get("/delete", (req, res) => {
-    db.query("DELETE FROM mydb.Admin where first_name='Server2'", function (err, result, fields) {
+    db.query("DELETE FROM mydb.Admin where first_name='Server'", function (err, result, fields) {
         if (err) throw err;
         res.send(result);
     });
 });
 
 
-app.listen(port, hostname, () => {
-    console.log(`http://${hostname}:${port}`);
+app.listen(host_port, hostname, () => {
+    console.log(`http://${hostname}:${host_port}`);
 });
