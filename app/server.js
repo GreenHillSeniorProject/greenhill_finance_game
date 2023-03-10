@@ -44,10 +44,6 @@ app.get("/update", (req, res) => {
 });
 
 app.get("/insert", (req, res) => {
-    db.query("INSERT INTO mydb.Admin (first_name, last_name, email) VALUES ('Server', 'Test', 'cool@gmool.com')", function (err, result, fields) {
-        if (err) throw err;
-        res.send(result);
-    });
     res.sendFile(__dirname, '/public/insert.html');
 });
 
