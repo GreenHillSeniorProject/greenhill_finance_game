@@ -1,5 +1,8 @@
-const mysql = require("mysql");
+let mysql = require("mysql");
+let bodyParser = require('body-parser');
 const config = require("../config.json");
+let path = require('path');
+
 const express = require("express");
 let host_port = config.host_port;
 let hostname = config.hostname;
@@ -21,13 +24,7 @@ db.connect((err)=>{
     }
 });
 
-app.post("/insert/:admin_id", (req, res) => {
-
-    let email = req.params.email;
-    let first_name = req.params.first_name;
-    let last_name = req.params.last_name;
-    console.log(admin_id);
-});
+//GET Requests
 
 app.get("/select", (req, res) => {
     db.query("SELECT * FROM mydb.Admin", function (err, result, fields) {
@@ -43,8 +40,8 @@ app.get("/update", (req, res) => {
     });
 });
 
-app.get("/insert", (req, res) => {
-    res.sendFile(__dirname, '/public/insert.html');
+app.get("/user/createEmployee", (req, res) => {
+    res.sendFile(path.join(__dirname, './public', 'views', 'user', 'createEmployee.html'));
 });
 
 app.get("/delete", (req, res) => {
@@ -54,6 +51,22 @@ app.get("/delete", (req, res) => {
     });
 });
 
+//POST REQUESTS
+app.post("/user/createEmployee", (req, res) =>{
+	let first_name = req.query.first_name;
+	let last_name = req.query.last_name;
+	let password = req.query.password; // will be secured at a later date
+	let username = req.query.username;
+	let email = req.query.email;
+
+    console.log(req);
+
+	db.query(`CALL mydb.insert_greenhill_employee(${first_name}, ${last_name}, ${email}, ${username}, ${password})`);
+
+	res.send("Account created");
+});
+
+app.use(bodyParser.urlencoded({extended: true}));
 
 app.listen(host_port, hostname, () => {
     console.log(`http://${hostname}:${host_port}`);
