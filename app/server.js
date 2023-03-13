@@ -8,6 +8,12 @@ let host_port = config.host_port;
 let hostname = config.hostname;
 let app = express();
 
+// configure the app to use bodyParser()
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+app.use(bodyParser.json());
+
 const db = mysql.createConnection({
     host: config.db_hostname,
     port: config.db_port,
@@ -53,15 +59,15 @@ app.get("/delete", (req, res) => {
 
 //POST REQUESTS
 app.post("/user/createEmployee", (req, res) =>{
-	let first_name = req.query.first_name;
-	let last_name = req.query.last_name;
-	let password = req.query.password; // will be secured at a later date
-	let username = req.query.username;
-	let email = req.query.email;
+    console.log(req.body);
+	let first_name = req.body.first_name;
+	let last_name = req.body.last_name;
+	let password = req.body.password; // will be secured at a later date
+	let username = req.body.username;
+	let email = req.body.email;
 
-    console.log(req);
 
-	db.query(`CALL mydb.insert_greenhill_employee(${first_name}, ${last_name}, ${email}, ${username}, ${password})`);
+	db.query(`CALL mydb.insert_greenhill_employee("${first_name}", "${last_name}", "${email}", "${username}", "${password}")`);
 
 	res.send("Account created");
 });
