@@ -26,10 +26,29 @@ app.post("/signup", (req, res) => {
         if (err) {
             console.log(err);
         } else {
-            res.send({message: 'Account created successfully'});
+            res.send({ message: 'Account created successfully' });
         }
     })
 });
+
+app.post("/signin", (req, res) => {
+    const email = req.body.email;
+    const password = req.body.password;
+
+    db.query('SELECT * FROM GreenhillEmployee WHERE email = ? AND password = ?', 
+    [email, password], 
+    (err, result) => {
+        if (err) {
+            res.send({ err: err });
+        } 
+        
+        if (result.length > 0) {
+            res.send(result);
+        } else {
+            res.send({message: "Account does not exist"});
+        }
+    })
+})
 
 app.listen(3001, () => {
     console.log("local host server running")
