@@ -20,11 +20,12 @@ USE `mydb` ;
 -- -----------------------------------------------------
 -- Table `mydb`.`Admin`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS Admin (
+CREATE TABLE IF NOT EXISTS `mydb`.`Admin` (
   `admin_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `first_name` VARCHAR(45) NOT NULL,
-  `last_name` VARCHAR(45) NOT NULL,
+  `first_name` VARCHAR(50) NOT NULL,
+  `last_name` VARCHAR(50) NOT NULL,
   `email` VARCHAR(320) NOT NULL,
+  `phone` VARCHAR(50) NOT NULL,
   `last_update` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`admin_id`),
   UNIQUE INDEX `admin_id_UNIQUE` (`admin_id` ASC) VISIBLE
@@ -32,35 +33,16 @@ CREATE TABLE IF NOT EXISTS Admin (
 ENGINE = InnoDB;
 
 -- -----------------------------------------------------
--- Table `mydb`.`GreenhillEmployee`
+-- Table `mydb`.`Advisor`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`GreenhillEmployee` (
-  `employee_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `first_name` VARCHAR(45) NOT NULL,
-  `last_name` VARCHAR(45) NULL,
-  `email` VARCHAR(320) NOT NULL,
-  `username` VARCHAR(25) NOT NULL,
-  `password` VARCHAR(45) NOT NULL,
-  `picture` BLOB NULL,
-  `active` TINYINT(1) NULL,
-  `last_update` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  `date_created` DATE NOT NULL DEFAULT (CURRENT_DATE),
-  PRIMARY KEY (`employee_id`),
-  UNIQUE INDEX `employee_id_UNIQUE` (`employee_id` ASC) VISIBLE,
-  UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE)
-ENGINE = InnoDB;
-
-
--- -----------------------------------------------------
--- Table `mydb`.`FinancialAdvisors`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`FinancialAdvisors` (
+CREATE TABLE IF NOT EXISTS `mydb`.`Advisor` (
   `advisor_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `first_name` VARCHAR(45) NOT NULL,
-  `last_name` VARCHAR(45) NULL,
+  `first_name` VARCHAR(50) NOT NULL,
+  `last_name` VARCHAR(50) NULL,
   `email` VARCHAR(320) NOT NULL,
-  `username` VARCHAR(25) NOT NULL,
-  `password` VARCHAR(45) NOT NULL,
+  `username` VARCHAR(40) NOT NULL,
+  `password` VARCHAR(128) NOT NULL,
+  `corporation` VARCHAR(50) NOT NULL,
   `picture` BLOB NULL,
   `active` TINYINT(1) NULL,
   `last_update` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -69,6 +51,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`FinancialAdvisors` (
   UNIQUE INDEX `advisor_id_UNIQUE` (`advisor_id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE)
 ENGINE = InnoDB;
+
 
 -- -----------------------------------------------------
 -- Table `mydb`.`Stocks`
@@ -92,17 +75,17 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`GameInfo` (
   `game_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `employee_id` INT UNSIGNED NULL,
+  `admin_id` INT UNSIGNED NULL,
   `starting_cash` DECIMAL(5,2) NULL,
   `start_date` DATETIME NOT NULL,
   `end_date` DATETIME NOT NULL,
   `last_update` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`game_id`),
   UNIQUE INDEX `game_id_UNIQUE` (`game_id` ASC) VISIBLE,
-  UNIQUE INDEX `employee_id_UNIQUE` (`employee_id` ASC) VISIBLE,
-  CONSTRAINT `employee_id_gameinfo`
-    FOREIGN KEY (`employee_id`)
-    REFERENCES `mydb`.`GreenhillEmployee` (`employee_id`)
+  UNIQUE INDEX `admin_id_UNIQUE` (`admin_id` ASC) VISIBLE,
+  CONSTRAINT `admin_id_gameinfo`
+    FOREIGN KEY (`admin_id`)
+    REFERENCES `mydb`.`Admin` (`admin_id`)
     ON DELETE SET NULL
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -122,7 +105,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Portfolios` (
   UNIQUE INDEX `game_id_UNIQUE` (`game_id` ASC) VISIBLE,
   CONSTRAINT `advisor_id_portfolios`
     FOREIGN KEY (`advisor_id`)
-    REFERENCES `mydb`.`FinancialAdvisors` (`advisor_id`)
+    REFERENCES `mydb`.`Advisor` (`advisor_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE,
   CONSTRAINT `game_id_portfolios`
@@ -136,17 +119,17 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `mydb`.`GameAdvisors`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`GameAdvisors` (
+CREATE TABLE IF NOT EXISTS `mydb`.`GameAdmin` (
   `game_id` INT UNSIGNED NOT NULL,
-  `advisor_id` INT UNSIGNED NOT NULL,
-  PRIMARY KEY (`game_id`, `advisor_id`),
-  INDEX `advisor_id_idx` (`advisor_id` ASC) VISIBLE,
-  CONSTRAINT `advisor_id_gameadvisors`
-    FOREIGN KEY (`advisor_id`)
-    REFERENCES `mydb`.`FinancialAdvisors` (`advisor_id`)
+  `admin_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`game_id`, `admin_id`),
+  INDEX `admin_id_idx` (`admin_id` ASC) VISIBLE,
+  CONSTRAINT `admin_id_gameadmin`
+    FOREIGN KEY (`admin_id`)
+    REFERENCES `mydb`.`Admin` (`admin_id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `game_id_gameadvisors`
+  CONSTRAINT `game_id_gameadmin`
     FOREIGN KEY (`game_id`)
     REFERENCES `mydb`.`GameInfo` (`game_id`)
     ON DELETE NO ACTION
@@ -199,7 +182,6 @@ CREATE TABLE IF NOT EXISTS `mydb`.`StockHistory` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
-
 
 
 SET SQL_MODE=@OLD_SQL_MODE;

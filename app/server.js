@@ -36,9 +36,9 @@ db.connect((err)=>{
 
 //GET Requests
 
-// handle GET request to select all entries from mydb.Admin table
+// handle GET request to select all entries from mydb.Advisor table
 app.get("/select", (req, res) => {
-    db.query("SELECT * FROM mydb.GreenhillEmployee", function (err, result, fields) {
+    db.query("SELECT * FROM mydb.Advisor", function (err, result, fields) {
         if (err) throw err;
         res.send(result);
         // let admins = result;
@@ -46,22 +46,22 @@ app.get("/select", (req, res) => {
     });
 });
 
-// handle GET request to update first_name column in mydb.Admin table
+// handle GET request to update first_name column in mydb.Advisor table
 app.get("/update", (req, res) => {
-    db.query("UPDATE mydb.Admin SET first_name = ? WHERE admin_id=?", ['Tested', 4], function (err, result, fields) {
+    db.query("UPDATE mydb.Advisor SET first_name = ? WHERE advisor_id=?", ['Tested', 4], function (err, result, fields) {
         if (err) throw err;
         res.send(result);
     });
 });
 
-// handle GET request to serve createEmployee.html file
-app.get("/user/createEmployee", (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/views/user/createEmployee.html'));
+// handle GET request to serve createAdvisor.html file
+app.get("/user/createAdvisor", (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/views/user/createAdvisor.html'));
 });
 
 // handle GET request to delete entry from mydb.Admin table
 app.get("/delete", (req, res) => {
-    db.query("DELETE FROM mydb.Admin where first_name=?", ['Server'], function (err, result, fields) {
+    db.query("DELETE FROM mydb.Advisor where first_name=?", ['Server'], function (err, result, fields) {
         if (err) throw err;
         res.send(result);
     });
@@ -70,32 +70,32 @@ app.get("/delete", (req, res) => {
 
 // POST REQUESTS
 
-// handle POST request to create new employee entry in mydb.Admin table
-app.post("/user/createEmployee", (req, res) =>{
+// handle POST request to create new Advisor entry in mydb.Advisor table
+app.post("/user/createAdvisor", (req, res) =>{
 	let first_name = req.body.first_name;
 	let last_name = req.body.last_name;
 	let password = req.body.password; // will be encrypted at a later date
 	let username = req.body.username;
 	let email = req.body.email;
 
-    // call stored procedure in mydb to insert new employee
-	db.query(`CALL mydb.insert_greenhill_employee(?, ?, ?, ?, ?)`,
-    [first_name, last_name, password, username, email],
+    // call stored procedure in mydb to insert new Advisor
+	db.query(`CALL mydb.insert_advisor(?, ?, ?, ?, ?, 'NULL')`,
+    [first_name, last_name, email, username, password],
     (err, result) => {
         if (err) {
             console.log(err)
         } else {
-            res.redirect("/user/createEmployee");
+            res.redirect("/user/createAdvisor");
         }
     });
 });
 
-// handle POST request to delete an employee
+// handle POST request to delete an Advisor
 app.post("/delete", (req, res) => {
-    const employee_id = req.body.employee_id;
-    db.query("DELETE FROM mydb.GreenhillEmployee WHERE employee_id=?", [employee_id], function (err, result, fields) {
+    const advisor_id = req.body.advisor_id;
+    db.query("DELETE FROM mydb.Advisor WHERE advisor_id=?", [advisor_id], function (err, result, fields) {
       if (err) throw err;
-      res.redirect("/user/createEmployee"); // redirect to the home page
+      res.redirect("/user/createAdvisor"); // redirect to the home page
     });
   });
 
