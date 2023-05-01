@@ -3,6 +3,16 @@ let mysql = require("mysql");
 let bodyParser = require('body-parser');
 const config = require("../config.json");
 let path = require('path');
+const axios = require('axios');
+const cors = require("cors");
+
+// finnhub API stuff
+const finnhub = require('finnhub');
+const api_key = finnhub.ApiClient.instance.authentications['api_key'];
+api_key.apiKey = "ch7m6n9r01qt83gcd2b0ch7m6n9r01qt83gcd2bg" // Replace this
+const apiKey = "ch7m6n9r01qt83gcd2b0ch7m6n9r01qt83gcd2bg";
+const finnhubClient = new finnhub.DefaultApi()
+
 
 // create express app
 const express = require("express");
@@ -15,6 +25,7 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
 app.use(bodyParser.json());
+app.use(cors());
 
 // create mysql database connection
 const db = mysql.createConnection({
@@ -67,6 +78,11 @@ app.get("/delete", (req, res) => {
     });
 });
 
+// handle GET request to login
+app.get("/user/login", (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/views/user/login.html'));
+});
+
 
 // POST REQUESTS
 
@@ -99,6 +115,78 @@ app.post("/delete", (req, res) => {
     });
   });
 
+
+// handle POST request to login
+app.post("/user/login", (req, res) => {
+    let username = req.body.username;
+    let password = req.body.password;
+    console.log(username);
+    console.log(password);
+    db.query("SELECT * FROM mydb.Advisor WHERE username=?", [username], function (err, result, fields) {
+      if (err) throw err;
+      res.redirect("/user/login"); // redirect to the home page
+      if (result.length == 0) {
+        console.log("---------> User does not exist");
+        //res.sendStatus(404);
+      }
+      else {
+        //const hashedPassword = result[0].password;
+        //if (bcrypt.compare(password, hashedPassword)) {
+        if (result[0].password == password) {
+            console.log("---------> Login Successful");
+            //res.send(`${username} is logged in!`);
+        } 
+        else {
+            console.log("---------> Password Incorrect");
+            //res.send("Password incorrect!");
+        }
+      }
+    });
+});
+
+const main = async () => {
+    const symbols = ['MSFT', 'META', 'TSLA']; // add more symbols here
+    for (const symbol of symbols) {
+      const stock = await getStockInfo(symbol);
+      if (stock != null) {
+        await insertStock(stock);
+        console.log(`Inserted stock info for ${symbol} into database.`);
+      }
+    }
+};
+
+// finnhub
+
+// insert a stock record into the database
+const insertStock = async (stock) => {
+    const sql = 'INSERT IGNORE INTO Stocks (ticker, description, dividend) VALUES (?, ?, ?)';
+    const values = [stock.symbol, stock.description, stock.price];
+    return new Promise((resolve, reject) => {
+        db.query(sql, values, (error, results, fields) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      });
+    });
+};
+
+const getStockInfo = async (symbol) => {
+    try {
+      const response = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`);
+      const data = response.data;
+      return {
+        symbol: symbol,
+        price: data.c,
+        description: data.description
+      };
+    } catch (error) {
+      console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
+      return null;
+    }
+};
+
   
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -106,3 +194,5 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.listen(host_port, hostname, () => {
     console.log(`http://${hostname}:${host_port}`);
 });
+
+main();
