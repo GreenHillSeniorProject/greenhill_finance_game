@@ -41,7 +41,6 @@ const insertStock = async (stock) => {
   const values = [stock.symbol, stock.description];
   try {
     const result = await db.query(sql, values);
-    console.log(`Inserted stock info for ${stock.symbol} into database.`);
     return result;
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
