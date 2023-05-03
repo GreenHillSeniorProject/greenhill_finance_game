@@ -5,7 +5,7 @@
 - Download MySQL Workbench
     - Will need to create an account if you don't have one already
     - Make sure to remember your password (will be used in later steps)
-- Clone `greenhill_finance_game` repo and `frontend-development` repo
+- Clone `greenhill_finance_game` repo and `frontend-development` repo from Git
 - Make sure you have Node.js installed
 
 ### How to set up dev environment
@@ -18,6 +18,8 @@
         - Expand `MySQL Servers` and install `MySQL Server 8.0` by selecting `MySQL Server 8.0.32 - x64` and clicking the right green arrow
         - Follow the onscreen instructions (you will need to enter in the password, **make sure you remember it**)
         - Restart your MySQL Workbench
+        - Click the plus sign to create a new connections
+        - 
 2. Once you're logged in, you will need to create a new schema
     - Click on the icon that looks like the database with the plus sign
     - Enter in `greenhill_localhost` as the name of the new schema
@@ -41,5 +43,3 @@
         - Run the command `node server.js`
     - In other terminal, navigate to `..\frontend-development\app`
         - Run the command `npm start`
-
-
