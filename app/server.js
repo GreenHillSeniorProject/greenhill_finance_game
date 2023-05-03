@@ -14,7 +14,7 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: "password",
+  password: config.db_localhost,
   database: "GreenHill_LocalHost",
   insecureAuth: true
 });
