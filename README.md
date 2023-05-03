@@ -19,7 +19,10 @@
         - Follow the onscreen instructions (you will need to enter in the password, **make sure you remember it**)
         - Restart your MySQL Workbench
         - Click the plus sign to create a new connections
-        - 
+            - For `Connection Name` type in `Local Instance`
+            - For `Hostname` type in `localhost`
+            - Click `Test Connection` and you should be navigated to the local server connection
+            
 2. Once you're logged in, you will need to create a new schema
     - Click on the icon that looks like the database with the plus sign
     - Enter in `greenhill_localhost` as the name of the new schema
