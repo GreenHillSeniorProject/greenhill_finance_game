@@ -22,7 +22,7 @@ const db = mysql.createConnection({
 });
 
 // Function to fetch stock info for a given symbol from an external API (Polygon)
-/* const getStockInfo = async (symbol) => {
+const getStockInfo = async (symbol) => {
   try {
     const response = await axios.get(`https://api.polygon.io/v1/meta/symbols/${symbol}/company?apiKey=${config.polygonApiKey}`);
     const data = response.data;
@@ -35,7 +35,7 @@ const db = mysql.createConnection({
     console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
     return null;
   }
-}; */
+};
 
 // Create a variable to track the delay between requests
 let delay = 1000; // 1 second
@@ -44,7 +44,7 @@ let delay = 1000; // 1 second
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
 
 // Function to fetch stock info for a given symbol from an external API (Yahoo)
-const getStockInfo = async (symbol) => {
+/* const getStockInfo = async (symbol) => {
   const options = {
     method: 'GET',
     url: `https://yahoo-finance127.p.rapidapi.com/price/${symbol}`,
@@ -67,7 +67,7 @@ const getStockInfo = async (symbol) => {
     return null;
   }
 };
-
+ */
 
 // Function to insert stock info into MySQL database
 const insertStock = async (stock) => {
@@ -141,7 +141,7 @@ app.post("/signin", (req, res) => {
 })
 
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
-/* const main = async () => {
+const main = async () => {
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
   const symbols = [];
   fs.createReadStream('constituents.csv')
@@ -165,11 +165,11 @@ app.post("/signin", (req, res) => {
         }
       }
     })
-}; */
+};
 
 
 // Main function to fetch stock info for multiple symbols and insert into database using Yahoo Finance API
-const main = async () => {
+/* const main = async () => {
   const symbols = [];
   fs.createReadStream('constituents.csv')
     .pipe(csv())
@@ -194,7 +194,7 @@ const main = async () => {
         await sleep(delay);
       }
     });
-};
+}; */
 
 
 
