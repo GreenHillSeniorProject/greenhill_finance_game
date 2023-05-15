@@ -24,12 +24,12 @@ const db = mysql.createConnection({
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
   try {
-    const response = await axios.get(`https://api.polygon.io/v1/meta/symbols/${symbol}/company?apiKey=${config.polygonApiKey}`);
+    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonApiKey}`);
     const data = response.data;
     return {
       symbol: symbol,
       price: data.lastQuotePrice,
-      description: data.description
+      description: data.results.description
     };
   } catch (error) {
     console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
@@ -195,8 +195,6 @@ const main = async () => {
       }
     });
 }; */
-
-
 
 app.listen(3001, () => {
   console.log("local host server running")
