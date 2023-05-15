@@ -1,4 +1,6 @@
 // Import necessary modules
+const csv = require("csv-parser");
+const fs = require("fs");
 const express = require("express");
 const mysql = require("mysql");
 const cors = require("cors");
@@ -20,7 +22,7 @@ const db = mysql.createConnection({
 });
 
 // Function to fetch stock info for a given symbol from an external API (Polygon)
-const getStockInfo = async (symbol) => {
+/* const getStockInfo = async (symbol) => {
   try {
     const response = await axios.get(`https://api.polygon.io/v1/meta/symbols/${symbol}/company?apiKey=${config.polygonApiKey}`);
     const data = response.data;
@@ -33,7 +35,39 @@ const getStockInfo = async (symbol) => {
     console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
     return null;
   }
+}; */
+
+// Create a variable to track the delay between requests
+let delay = 1000; // 1 second
+
+// Function to delay the execution for the specified duration
+const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
+
+// Function to fetch stock info for a given symbol from an external API (Yahoo)
+const getStockInfo = async (symbol) => {
+  const options = {
+    method: 'GET',
+    url: `https://yahoo-finance127.p.rapidapi.com/price/${symbol}`,
+    headers: {
+      'X-RapidAPI-Key': config.yahooApiKey,
+      'X-RapidAPI-Host': 'yahoo-finance127.p.rapidapi.com'
+    }
+  };
+
+  try {
+    const response = await axios.request(options);
+    const data = response.data;
+    return {
+      symbol: symbol,
+      price: data.regularMarketPrice,
+      description: data.longName
+    };
+  } catch (error) {
+    console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
+    return null;
+  }
 };
+
 
 // Function to insert stock info into MySQL database
 const insertStock = async (stock) => {
@@ -106,24 +140,63 @@ app.post("/signin", (req, res) => {
     })
 })
 
-// Main function to fetch stock info for multiple symbols and insert into database
-const main = async () => {
-  const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
-  for (const symbol of symbols) {
-    const stock = await getStockInfo(symbol);
-    const stockInDB = await getStockFromDB(symbol);
-    if (stock !== null && (stockInDB === null || stockInDB.length === 0)) {
-      try {
-        await insertStock(stock);
-        console.log(`Inserted stock info for ${symbol} into database.`);
-      } catch (error) {
-        console.error(`Error inserting stock info for ${symbol}: ${error.message}`);
+// Main function to fetch stock info for multiple symbols and insert into database using Polygon API
+/* const main = async () => {
+  // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
+  const symbols = [];
+  fs.createReadStream('constituents.csv')
+    .pipe(csv())
+    .on('data', (data) => {
+      symbols.push(data.Symbol)
+    })
+    .on('end', async() => {
+      for (const symbol of symbols) {
+        const stock = await getStockInfo(symbol);
+        const stockInDB = await getStockFromDB(symbol);
+        if (stock !== null && (stockInDB === null || stockInDB.length === 0)) {
+          try {
+            await insertStock(stock);
+            console.log(`Inserted stock info for ${symbol} into database.`);
+          } catch (error) {
+            console.error(`Error inserting stock info for ${symbol}: ${error.message}`);
+          }
+        } else {
+          console.log(`Skipping duplicate entry for ${stock.symbol}`);
+        }
       }
-    } else {
-      console.log(`Skipping duplicate entry for ${stock.symbol}`);
-    }
-  }
+    })
+}; */
+
+
+// Main function to fetch stock info for multiple symbols and insert into database using Yahoo Finance API
+const main = async () => {
+  const symbols = [];
+  fs.createReadStream('constituents.csv')
+    .pipe(csv())
+    .on('data', (data) => {
+      symbols.push(data.Symbol);
+    })
+    .on('end', async () => {
+      for (const symbol of symbols) {
+        const stock = await getStockInfo(symbol);
+        const stockInDB = await getStockFromDB(symbol);
+        if (stock !== null && (stockInDB === null || stockInDB.length === 0)) {
+          try {
+            await insertStock(stock);
+            console.log(`Inserted stock info for ${symbol} into the database.`);
+          } catch (error) {
+            console.error(`Error inserting stock info for ${symbol}: ${error.message}`);
+          }
+        } else {
+          console.log(`Skipping duplicate entry for ${symbol}`);
+        }
+        // Delay between requests to avoid rate limiting
+        await sleep(delay);
+      }
+    });
 };
+
+
 
 app.listen(3001, () => {
   console.log("local host server running")
