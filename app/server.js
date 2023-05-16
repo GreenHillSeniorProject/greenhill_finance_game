@@ -140,6 +140,8 @@ app.post("/signin", (req, res) => {
     })
 })
 
+
+
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
@@ -163,6 +165,7 @@ const main = async () => {
         } else {
           console.log(`Skipping duplicate entry for ${stock.symbol}`);
         }
+        await sleep(delay);
       }
     })
 };
