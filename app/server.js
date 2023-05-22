@@ -109,7 +109,7 @@ app.post("/signup", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  db.query('INSERT INTO GreenhillEmployee (first_name, last_name, email, username, password) VALUES (?, ?, ?, ?, ?)',
+  db.query('INSERT INTO Employees (first_name, last_name, email, username, password) VALUES (?, ?, ?, ?, ?)',
     [first_name, last_name, email, username, password],
     (err, result) => {
       if (err) {
@@ -125,7 +125,7 @@ app.post("/signin", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  db.query('SELECT * FROM GreenhillEmployee WHERE email = ? AND password = ?',
+  db.query('SELECT * FROM Employees WHERE email = ? AND password = ?',
     [email, password],
     (err, result) => {
       if (err) {
