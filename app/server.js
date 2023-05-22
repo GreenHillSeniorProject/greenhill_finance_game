@@ -1,6 +1,6 @@
 // Import necessary modules
 const express = require("express");
-const mysql = require("mysql");
+const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require('axios');
 const config = require('../config.json');
@@ -14,59 +14,20 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: "password",
-  database: "GreenHill_LocalHost",
+  password: config.password,
+  database: "greenhill_localhost",
   insecureAuth: true
 });
 
-// Function to fetch stock info for a given symbol from an external API (Polygon)
-const getStockInfo = async (symbol) => {
-  try {
-    const response = await axios.get(`https://api.polygon.io/v1/meta/symbols/${symbol}/company?apiKey=${config.polygonApiKey}`);
-    const data = response.data;
-    return {
-      symbol: symbol,
-      price: data.lastQuotePrice,
-      description: data.description
-    };
-  } catch (error) {
-    console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
-    return null;
-  }
-};
+// fetch FAQ data
+app.get('faq_list', function(req, res, next) {
+  var sql = 'SELECT * FROM faq';
+  db.query(sql, function(err, data, fields) {
+    if (err) throw err;
+    res.render('faq_list', {title: 'FAQ List', userData: data});
 
-// Function to insert stock info into MySQL database
-const insertStock = async (stock) => {
-  const sql = 'INSERT INTO Stocks (ticker, description) VALUES (?, ?)';
-  const values = [stock.symbol, stock.description];
-  try {
-    const result = await db.query(sql, values);
-    console.log(`Inserted stock info for ${stock.symbol} into database.`);
-    return result;
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      console.log(`Skipping duplicate entry for ${stock.symbol}`);
-      return null;
-    } else {
-      throw error;
-    }
-  }
-};
-
-// Function to fetch stock info for a given symbol from MySQL database
-const getStockFromDB = async (symbol) => {
-  const sql = 'SELECT * FROM Stocks WHERE ticker = ?';
-  const values = [symbol];
-  return new Promise((resolve, reject) => {
-    db.query(sql, values, (error, results, fields) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(results);
-      }
-    });
   });
-};
+});
 
 // Route for handling user sign up requests
 app.post("/signup", (req, res) => {
@@ -109,6 +70,7 @@ app.post("/signin", (req, res) => {
 
 // Main function to fetch stock info for multiple symbols and insert into database
 const main = async () => {
+  /*
   const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
   for (const symbol of symbols) {
     const stock = await getStockInfo(symbol);
@@ -123,7 +85,7 @@ const main = async () => {
     } else {
       console.log(`Skipping duplicate entry for ${stock.symbol}`);
     }
-  }
+  } */
 };
 
 app.listen(3001, () => {
