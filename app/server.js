@@ -20,13 +20,16 @@ const db = mysql.createConnection({
 });
 
 // fetch FAQ data
-app.get('faq_list', function(req, res, next) {
+app.get('/faq', (req, res) => {
   var sql = 'SELECT * FROM faq';
-  db.query(sql, function(err, data, fields) {
-    if (err) throw err;
-    res.render('faq_list', {title: 'FAQ List', userData: data});
-
-  });
+  db.query(sql, (err, data) => {
+    if (err) {throw err;}
+    else {
+      // Send the data as a JSON response
+      res.json(data);
+      console.log(data);
+    };
+});
 });
 
 // Route for handling user sign up requests
@@ -54,6 +57,25 @@ app.post("/signin", (req, res) => {
   const password = req.body.password;
 
   db.query('SELECT * FROM GreenhillEmployee WHERE email = ? AND password = ?',
+    [email, password],
+    (err, result) => {
+      if (err) {
+        res.send({ err: err });
+      }
+
+      if (result.length > 0) {
+        res.send(result);
+      } else {
+        res.send({ message: "Account does not exist" });
+      }
+    })
+})
+
+//Handle buy request
+app.post("/buy", (req, res) => {
+  const advisor_id = req.body.advisor_id;
+
+  db.query('SELECT * FROM GreenhillEmployee WHERE user = ? AND password = ?',
     [email, password],
     (err, result) => {
       if (err) {
