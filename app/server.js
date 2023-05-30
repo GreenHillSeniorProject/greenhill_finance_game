@@ -102,43 +102,49 @@ const getStockFromDB = async (symbol) => {
 };
 
 // Route for handling user sign up requests
-app.post("/signup", (req, res) => {
-  const first_name = req.body.first_name;
-  const last_name = req.body.last_name;
-  const username = req.body.username;
-  const email = req.body.email;
-  const password = req.body.password;
+app.post("/signup", async (req, res) => {
+  const { first_name, last_name, username, email, password } = req.body;
 
-  db.query('INSERT INTO Employees (first_name, last_name, email, username, password) VALUES (?, ?, ?, ?, ?)',
-    [first_name, last_name, email, username, password],
-    (err, result) => {
-      if (err) {
-        console.log(err);
-      } else {
-        res.send({ message: 'Account created successfully' });
-      }
-    })
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db.query(
+      'INSERT INTO Employees (first_name, last_name, email, username, password) VALUES (?, ?, ?, ?, ?)',
+      [first_name, last_name, email, username, hashedPassword]
+    );
+    res.send({ message: 'Account created successfully' });
+  } catch (error) {
+    console.error('Error creating account:', error);
+    res.status(500).send({ error: 'An error occurred while creating the account' });
+  }
 });
 
 // Route for handling user sign in requests
-app.post("/signin", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
+app.post("/signin", async (req, res) => {
+  const { email, password } = req.body;
 
-  db.query('SELECT * FROM Employees WHERE email = ? AND password = ?',
-    [email, password],
-    (err, result) => {
-      if (err) {
-        res.send({ err: err });
-      }
+  try {
+    const result = await db.query('SELECT * FROM Employees WHERE email = ?', [email]);
+    if (result.length === 0) {
+      res.status(404).send({ message: "Account does not exist" });
+      return;
+    }
 
-      if (result.length > 0) {
-        res.send(result);
-      } else {
-        res.send({ message: "Account does not exist" });
-      }
-    })
-})
+    const user = result[0];
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      res.status(401).send({ message: "Incorrect password" });
+      return;
+    }
+
+    // Remove the password field from the response for security
+    delete user.password;
+    res.send(user);
+  } catch (error) {
+    console.error('Error signing in:', error);
+    res.status(500).send({ error: 'An error occurred while signing in' });
+  }
+});
 
 
 
