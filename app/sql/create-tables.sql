@@ -15,26 +15,48 @@ CREATE SCHEMA IF NOT EXISTS `greenhill_localhost` DEFAULT CHARACTER SET utf8 ;
 USE `greenhill_localhost` ;
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`Employees`
+-- Table `greenhill_localhost`.`Users`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `Employees` (
-  `employee_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `Users` (
+  `user_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `first_name` VARCHAR(45) NOT NULL,
   `last_name` VARCHAR(45) NULL,
-  `email` VARCHAR(320) NOT NULL,
-  `user_type` ENUM('admin', 'employee', 'advisor') NOT NULL,
   `username` VARCHAR(25) NOT NULL,
-  `password` VARCHAR(45) NOT NULL,
+  `invitation_code` VARCHAR(10) NULL,
+  `email` VARCHAR(320) NOT NULL,
+  `phone_number` VARCHAR(20) NULL,
+  `password` VARCHAR(100) NOT NULL,
+  `user_type` ENUM('admin', 'employee', 'advisor') NOT NULL,
+  `is_financial_advisor` TINYINT(1) NOT NULL DEFAULT 0,
   `picture` BLOB NULL,
   `active` TINYINT(1) NULL,
   `last_update` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   `date_created` DATE NOT NULL DEFAULT (CURRENT_DATE),
-  `is_financial_advisor` TINYINT(1) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`employee_id`),
-  UNIQUE INDEX `employee_id_UNIQUE` (`employee_id` ASC) VISIBLE,
+  PRIMARY KEY (`user_id`),
+  UNIQUE INDEX `user_id_UNIQUE` (`user_id` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE)
 ENGINE = InnoDB;
 
+-- -----------------------------------------------------
+-- Table `greenhill_localhost`.`Referrals`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `Referrals` (
+  `referral_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `referrer_id` INT UNSIGNED NOT NULL,
+  `referred_email` VARCHAR(320) NOT NULL,
+  `referral_code` VARCHAR(10) NOT NULL,
+  `status` ENUM('pending', 'accepted', 'expired') NOT NULL,
+  `date_created` DATE NOT NULL DEFAULT (CURRENT_DATE),
+  `expiration_date` TIMESTAMP(6) NULL,
+  `is_used` TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`referral_id`),
+  UNIQUE INDEX `referral_code_UNIQUE` (`referral_code` ASC) VISIBLE,
+  CONSTRAINT `referrer_id_referrals`
+    FOREIGN KEY (`referrer_id`)
+    REFERENCES `greenhill_localhost`.`Users` (`user_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
 
 -- -----------------------------------------------------
 -- Table `greenhill_localhost`.`Stocks`
@@ -57,16 +79,16 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `GameInfo` (
   `game_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `employee_id` INT UNSIGNED NULL,
+  `user_id` INT UNSIGNED NULL,
   `starting_cash` DECIMAL(5,2) NULL,
   `start_date` DATETIME NOT NULL,
   `end_date` DATETIME NOT NULL,
   `last_update` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`game_id`),
   UNIQUE INDEX `game_id_UNIQUE` (`game_id` ASC) VISIBLE,
-  CONSTRAINT `employee_id_gameinfo`
-    FOREIGN KEY (`employee_id`)
-    REFERENCES `greenhill_localhost`.`Employees` (`employee_id`)
+  CONSTRAINT `user_id_gameinfo`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `greenhill_localhost`.`Users` (`user_id`)
     ON DELETE SET NULL
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -78,12 +100,12 @@ ENGINE = InnoDB;
 CREATE TABLE IF NOT EXISTS `Portfolios` (
   `portfolio_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `portfolio_name` VARCHAR(45) NOT NULL,
-  `employee_id` INT UNSIGNED NOT NULL,
+  `user_id` INT UNSIGNED NOT NULL,
   `game_id` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`portfolio_id`),
-  CONSTRAINT `employee_id_portfolios`
-    FOREIGN KEY (`employee_id`)
-    REFERENCES `greenhill_localhost`.`Employees` (`employee_id`)
+  CONSTRAINT `user_id_portfolios`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `greenhill_localhost`.`Users` (`user_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE,
   CONSTRAINT `game_id_portfolios`
@@ -131,6 +153,18 @@ CREATE TABLE IF NOT EXISTS `StockHistory` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `greenhill_localhost`.`FAQ`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `FAQ` (
+  `faq_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `question` VARCHAR(255) NOT NULL,
+  `answer` TEXT NOT NULL,
+  `date_created` DATE NOT NULL,
+  PRIMARY KEY (`faq_id`)
+) ENGINE = InnoDB;
+
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

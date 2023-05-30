@@ -5,6 +5,8 @@ const express = require("express");
 const mysql = require("mysql");
 const cors = require("cors");
 const axios = require('axios');
+const bcrypt = require('bcrypt');
+const util = require('util');
 const config = require('../config.json');
 
 // Create Express app and set up middleware
@@ -50,7 +52,7 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-let delay = 1000; // 1 second
+const delay = 5 * 60 * 1000; // 5 minutes
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
@@ -86,7 +88,7 @@ const insertStock = async (stock) => {
   const sql = 'INSERT INTO Stocks (ticker, description) VALUES (?, ?)';
   const values = [stock.symbol, stock.description];
   try {
-    const result = await db.query(sql, values);
+    const result = await util.promisify(db.query).bind(db)(sql, values);
     return result;
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
@@ -113,23 +115,66 @@ const getStockFromDB = async (symbol) => {
   });
 };
 
-// Route for handling user sign up requests
-app.post("/signup", (req, res) => {
-  const first_name = req.body.first_name;
-  const last_name = req.body.last_name;
-  const username = req.body.username;
-  const email = req.body.email;
-  const password = req.body.password;
+// Function to generate a new referral code
+function generateReferralCode() {
+  // Generate a unique referral code according to your requirements
+  // For example, you can use a combination of letters and numbers
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const referralCodeLength = 8;
+  let referralCode = '';
 
-  db.query('INSERT INTO Employees (first_name, last_name, email, username, password) VALUES (?, ?, ?, ?, ?)',
-    [first_name, last_name, email, username, password],
-    (err, result) => {
-      if (err) {
-        console.log(err);
-      } else {
-        res.send({ message: 'Account created successfully' });
-      }
-    })
+  for (let i = 0; i < referralCodeLength; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    referralCode += characters[randomIndex];
+  }
+
+  return referralCode;
+}
+
+
+// Route for handling user sign up requests
+app.post("/signup", async (req, res) => {
+  const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
+
+  // Generate a new referral code
+  const referral_code = generateReferralCode();
+
+  try {
+    // Validate the invitation code
+    const referralQuery = 'SELECT referrer_id FROM Referrals WHERE referral_code = ?';
+    const referralQueryAsync = util.promisify(db.query).bind(db);
+    const referralResult = await referralQueryAsync(referralQuery, [invitation_code]);
+
+    if (referralResult.length === 0) {
+      res.send({ error: 'Invalid invitation code' });
+      return;
+    }
+
+    const referrer_id = referralResult[0].referrer_id;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert the user into the database
+    const userQuery = 'INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)';
+    const userQueryAsync = util.promisify(db.query).bind(db);
+    await userQueryAsync(userQuery, [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+
+    // Insert the referral information
+    const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
+    const expiration_date = new Date();
+    expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
+    const referralInsertQueryAsync = util.promisify(db.query).bind(db);
+    await referralInsertQueryAsync(referralInsertQuery, [referrer_id, email, referral_code, 'pending', expiration_date]);
+
+    // Update the referral information
+    const referralUpdateQuery = 'UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?';
+    const referralUpdateQueryAsync = util.promisify(db.query).bind(db);
+    await referralUpdateQueryAsync(referralUpdateQuery, [invitation_code]);
+
+    res.send({ message: 'Account created successfully' });
+  } catch (error) {
+    console.error('Error creating account:', error);
+    res.status(500).send({ error: 'An error occurred while creating the account' });
+  }
 });
 
 // Route for handling user sign in requests
@@ -137,26 +182,7 @@ app.post("/signin", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  db.query('SELECT * FROM Employees WHERE email = ? AND password = ?',
-    [email, password],
-    (err, result) => {
-      if (err) {
-        res.send({ err: err });
-      }
-
-      if (result.length > 0) {
-        res.send(result);
-      } else {
-        res.send({ message: "Account does not exist" });
-      }
-    })
-})
-
-//Handle buy request
-app.post("/buy", (req, res) => {
-  const advisor_id = req.body.advisor_id;
-
-  db.query('SELECT * FROM GreenhillEmployee WHERE user = ? AND password = ?',
+  db.query('SELECT * FROM Users WHERE email = ? AND password = ?',
     [email, password],
     (err, result) => {
       if (err) {
