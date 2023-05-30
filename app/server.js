@@ -2,7 +2,7 @@
 const csv = require("csv-parser");
 const fs = require("fs");
 const express = require("express");
-const mysql = require("mysql");
+const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require('axios');
 const config = require('../config.json');
@@ -19,6 +19,18 @@ const db = mysql.createConnection({
   password: config.db_localhost,
   database: "GreenHill_LocalHost",
   insecureAuth: true
+});
+
+// fetch FAQ data
+app.get('/faq', (req, res) => {
+  var sql = 'SELECT * FROM faq';
+  db.query(sql, (err, data) => {
+    if (err) {throw err;}
+    else {
+      // Send the data as a JSON response
+      res.json(data);
+      console.log(data);
+    };
 });
 
 // Function to fetch stock info for a given symbol from an external API (Polygon)
@@ -128,6 +140,45 @@ app.post("/signin", async (req, res) => {
       res.status(404).send({ message: "Account does not exist" });
       return;
     }
+
+
+//Handle buy request
+app.post("/buy", (req, res) => {
+  const advisor_id = req.body.advisor_id;
+
+  db.query('SELECT * FROM GreenhillEmployee WHERE user = ? AND password = ?',
+    [email, password],
+    (err, result) => {
+      if (err) {
+        res.send({ err: err });
+      }
+
+      if (result.length > 0) {
+        res.send(result);
+      } else {
+        res.send({ message: "Account does not exist" });
+      }
+    })
+})
+
+// Main function to fetch stock info for multiple symbols and insert into database
+const main = async () => {
+  /*
+  const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
+  for (const symbol of symbols) {
+    const stock = await getStockInfo(symbol);
+    const stockInDB = await getStockFromDB(symbol);
+    if (stock !== null && (stockInDB === null || stockInDB.length === 0)) {
+      try {
+        await insertStock(stock);
+        console.log(`Inserted stock info for ${symbol} into database.`);
+      } catch (error) {
+        console.error(`Error inserting stock info for ${symbol}: ${error.message}`);
+      }
+    } else {
+      console.log(`Skipping duplicate entry for ${stock.symbol}`);
+    }
+  } */
 
     const user = result[0];
     const passwordMatch = await bcrypt.compare(password, user.password);
