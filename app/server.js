@@ -254,6 +254,25 @@ const main = async () => {
     });
 }; */
 
+app.post("/create", (req, res) => {
+  const type = req.body.type;
+  const fund = req.body.fund;
+  const start = req.body.start;
+  const end = req.body.end;
+  const sponsor = req.body.sponsor;
+
+  var createTable = 'INSERT INTO GameInfo (game_id, employee_id, starting_cash, start_date, end_date, sponsor) SELECT ?, employee_id, ?, ?, ?, ? FROM GreenHillEmployee;'
+  var values = [type, fund, start, end, sponsor];
+
+  db.query(createTable, values,
+    (err, result) => {
+      if (err) {
+        res.send({ err: err });
+      }
+      console.log("Game created.")
+    })
+})
+
 app.listen(3001, () => {
   console.log("local host server running")
 });
