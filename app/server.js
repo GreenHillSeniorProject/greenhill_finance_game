@@ -9,6 +9,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
+//const jwt = require("jwt-simple");
 
 // Create Express app and set up middleware
 const app = express();
@@ -327,6 +328,120 @@ const main = async () => {
       }
     });
 }; */
+
+
+/*
+app.post("/create", (req, res) => {
+  const type = req.body.type;
+  const fund = req.body.fund;
+  const start = req.body.start;
+  const end = req.body.end;
+  const sponsor = req.body.sponsor;
+
+  var createTable = 'INSERT INTO GameInfo (game_id, employee_id, starting_cash, start_date, end_date, sponsor) SELECT ?, employee_id, ?, ?, ?, ? FROM Users'
+  var values = [type, fund, start, end, sponsor];
+
+  db.query(createTable, values,
+    (err, result) => {
+      if (err) {
+        res.send({ err: err });
+      }
+      console.log("Game created.")
+    })
+});
+
+app.post("/changeAdvisorInfo", (req, res) => {
+  let token = req.body.token;
+  let newUsername = req.body.username;
+  let newPhoneNumber = req.body.phone_number;
+  let newPassword = req.body.password;
+
+    let user = await getUserFromToken(token);
+
+    if (user === "false") {
+        res.status(FAILSTATUS);
+        return res.json({error: "Account does not exist"});
+    } 
+
+    if (user === "error") {
+        res.status(ERRORSTATUS);
+        return res.json({error: "Invalid token"});
+    }
+
+    let id = user.employee_id;
+    let newHashedPassword = await bcrypt.hash(newPassword, 10);
+    let sql = `UPDATE Users SET username = ?, phone_number = ?, password = ?  WHERE id = ?`;
+    let values = [newUsername, newPhoneNumber, newHashedPassword, id];
+
+    if (killCreated === "error") {
+        res.status(ERRORSTATUS);
+        return res.json({error: "Something went wrong"});
+    }
+
+    res.status(SUCCESSSTATUS);
+    return res.json({info: newUsername, success: "Changed"});
+});
+
+async function getUserFromToken(token) {
+  try {
+      let decoded = jwt.decode(token, SECRET);
+
+      let user = await getValue("Users", "email", decoded.email);
+
+      if (user === "false") {
+          return "false";
+      }
+
+      let hashedPassword = user[0].password; 
+      let accountExists = await validatePassword(decoded.password, hashedPassword);
+
+      if (accountExists === "true") {
+          return user[0];
+      }
+
+      return "false";
+
+  } catch (err) {
+      return "error";
+  }
+};
+
+async function getValue(table, category, value) {
+  let text = `SELECT * FROM ${table} WHERE ${category} = $1`;
+  let values = [value];
+
+  try {
+      const res = await pool.query(text, values);
+      
+      if (res.rows.length > 0) {
+          return res.rows;
+      }
+
+      return "false";
+
+  } catch (err) {
+      console.log(err.stack);
+      return "error";
+  } 
+}
+
+
+async function validatePassword(password, hashedPassword) {
+  try {
+      const res = await bcrypt.compare(password, hashedPassword);
+      
+      if (res) {
+          return "true";
+      }
+
+      return "false";
+
+  } catch (err) {
+      console.log(err.stack);
+      return "error";
+  }
+};
+*/
 
 app.listen(3001, () => {
   console.log("local host server running")
