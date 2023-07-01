@@ -2,6 +2,7 @@
 const csv = require("csv-parser");
 const fs = require("fs");
 const express = require("express");
+const moment = require("moment");
 const mysql = require("mysql");
 const cors = require("cors");
 const axios = require('axios');
@@ -42,7 +43,6 @@ const getStockInfo = async (symbol) => {
     const data = response.data;
     return {
       symbol: symbol,
-      price: data.lastQuotePrice,
       description: data.results.description
     };
   } catch (error) {
@@ -100,9 +100,54 @@ const insertStock = async (stock) => {
   }
 };
 
+// Function to fetch stock prices from the market data endpoint and insert into StockHistory table
+const insertStockHistory = async (stockId, high, low, open, close) => {
+  const sql = 'INSERT INTO StockHistory (stock_id, high, low, open, close) VALUES (?, ?, ?, ?, ?)';
+  const values = [stockId, high, low, open, close];
+  try {
+    const result = await util.promisify(db.query).bind(db)(sql, values);
+    return result;
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      console.log(`Skipping duplicate entry for stock_id ${stockId}`);
+      return null;
+    } else {
+      throw error;
+    }
+  }
+};
+
+// Function to update stock prices in the StockHistory table
+const updateStockHistory = async (stockId, high, low, open, close) => {
+  const sql = 'UPDATE StockHistory SET high = ?, low = ?, open = ?, close = ? WHERE stock_id = ?';
+  const values = [high, low, open, close, stockId];
+
+  try {
+    const result = await util.promisify(db.query).bind(db)(sql, values);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Function to fetch stock info for a given symbol from MySQL database
 const getStockFromDB = async (symbol) => {
   const sql = 'SELECT * FROM Stocks WHERE ticker = ?';
+  const values = [symbol];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+};
+
+// Function to fetch stock history info for a given symbol from MySQL database
+const getStockHistoryFromDB = async (symbol) => {
+  const sql = 'SELECT * FROM StockHistory WHERE stock_id = ?';
   const values = [symbol];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -220,9 +265,38 @@ const main = async () => {
         } else {
           console.log(`Skipping duplicate entry for ${stock.symbol}`);
         }
+
+        if (stockInDB !== null && stockInDB.length > 0) {
+          const stockId = stockInDB[0].stock_id;
+          const date = '2023-06-30'; // specify the date for which you want to fetch the market data
+  
+          try {
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonApiKey}`);
+            const data = response.data;
+            const { high, low, open, close } = data;
+  
+            const stockHistoryInDB = await getStockHistoryFromDB(stockId, date);
+  
+            if (stockHistoryInDB !== null && stockHistoryInDB.length > 0) {
+              // Update existing stock history
+              await updateStockHistory(stockId, high, low, open, close);
+              console.log(`Updated stock history for ${symbol} in the database.`);
+            } else {
+              // Insert new stock history
+              await insertStockHistory(stockId, high, low, open, close);
+              console.log(`Inserted stock history for ${symbol} into the database.`);
+            }
+          } catch (error) {
+            console.error(`Error inserting/updating stock history for ${symbol}: ${error.message}`);
+          }
+        } else {
+          console.log(`No stock information found for ${symbol} in the database.`);
+        }
+  
         await sleep(delay);
       }
-    })
+    });
+    
 };
 
 
