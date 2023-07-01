@@ -2,7 +2,7 @@
 const csv = require("csv-parser");
 const fs = require("fs");
 const express = require("express");
-const mysql = require("mysql");
+const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require('axios');
 const bcrypt = require('bcrypt');
@@ -19,8 +19,8 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.db_localhost,
-  database: "GreenHill_LocalHost",
+  password: config.password,
+  database: "greenhill_localhost",
   insecureAuth: true
 });
 
@@ -41,6 +41,7 @@ const getStockInfo = async (symbol) => {
   try {
     const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonApiKey}`);
     const data = response.data;
+
     return {
       symbol: symbol,
       price: data.lastQuotePrice,
@@ -86,8 +87,8 @@ const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duratio
 
 // Function to insert stock info into MySQL database
 const insertStock = async (stock) => {
-  const sql = 'INSERT INTO Stocks (ticker, description) VALUES (?, ?)';
-  const values = [stock.symbol, stock.description];
+  const sql = 'INSERT INTO Stocks (ticker, description, price) VALUES (?, ?, ?)';
+  const values = [stock.symbol, stock.description, 12.34]; // change to stock.price once we actually have prices
   try {
     const result = await util.promisify(db.query).bind(db)(sql, values);
     return result;
@@ -131,6 +132,66 @@ function generateReferralCode() {
 
   return referralCode;
 }
+
+
+// Function to update balance after buying/selling - NOT TESTED
+const updateBalance = (user_id, stock_ticker, numStocks, isBuying) => {
+  const userSql = 'SELECT balance FROM users WHERE user_id = ?';
+  const userValues = [user_id];
+  const transactionAmount = isBuying ? numStocks : -numStocks;
+
+  return new Promise((resolve, reject) => {
+    db.query(userSql, userValues, (userError, userResults) => {
+      if (userError) {
+        reject(userError);
+        return;
+      }
+
+      if (userResults.length === 0) {
+        reject(new Error(`User with ID ${user_id} not found`));
+        return;
+      }
+
+      const stockSql = 'SELECT price FROM stocks WHERE ticker = ?';
+      const stockValues = [stock_ticker];
+
+      db.query(stockSql, stockValues, (stockError, stockResults) => {
+        if (stockError) {
+          reject(stockError);
+          return;
+        }
+
+        if (stockResults.length === 0) {
+          reject(new Error(`Stock with ticker ${stock_ticker} not found`));
+          return;
+        }
+
+        const stockPrice = stockResults[0].price;
+        const currBalance = userResults[0].balance;
+        const transactionValue = stockPrice * numStocks;
+        const newBalance = currBalance + (transactionAmount * transactionValue);
+
+        if (newBalance < 0) {
+          reject(new Error('Insufficient balance'));
+          return;
+        }
+
+        const updateSql = 'UPDATE users SET balance = ? WHERE user_id = ?';
+        const updateValues = [newBalance, user_id];
+
+        db.query(updateSql, updateValues, (updateError) => {
+          if (updateError) {
+            reject(updateError);
+          } else {
+            resolve(newBalance);
+          }
+        });
+      });
+    });
+  });
+};
+
+
 
 
 // Route for handling user sign up requests
@@ -209,6 +270,7 @@ const main = async () => {
     })
     .on('end', async() => {
       for (const symbol of symbols) {
+        console.log(symbol);
         const stock = await getStockInfo(symbol);
         const stockInDB = await getStockFromDB(symbol);
         if (stock !== null && (stockInDB === null || stockInDB.length === 0)) {
@@ -218,7 +280,8 @@ const main = async () => {
           } catch (error) {
             console.error(`Error inserting stock info for ${symbol}: ${error.message}`);
           }
-        } else {
+        } 
+        else {
           console.log(`Skipping duplicate entry for ${stock.symbol}`);
         }
         await sleep(delay);
