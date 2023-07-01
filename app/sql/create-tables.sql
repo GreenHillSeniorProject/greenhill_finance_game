@@ -142,8 +142,10 @@ ENGINE = InnoDB;
 CREATE TABLE IF NOT EXISTS `StockHistory` (
   `record_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `stock_id` INT UNSIGNED NOT NULL,
-  `price` DECIMAL(5,2) NULL,
-  `cusip` VARCHAR(10) NOT NULL,
+  `high` DECIMAL(10, 2) NULL,
+  `low` DECIMAL(10, 2) NULL,
+  `open` DECIMAL(10, 2) NULL,
+  `close` DECIMAL(10, 2) NULL,
   `timestamp` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`record_id`),
   UNIQUE INDEX `stock_id_timestamp_UNIQUE` (`stock_id`, `timestamp`) VISIBLE,
@@ -151,8 +153,10 @@ CREATE TABLE IF NOT EXISTS `StockHistory` (
     FOREIGN KEY (`stock_id`)
     REFERENCES `greenhill_localhost`.`Stocks` (`stock_id`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE
+)
 ENGINE = InnoDB;
+
 
 -- -----------------------------------------------------
 -- Table `greenhill_localhost`.`FAQ`
