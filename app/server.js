@@ -2,6 +2,7 @@
 const csv = require("csv-parser");
 const fs = require("fs");
 const express = require("express");
+const moment = require("moment");
 const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require('axios');
@@ -41,10 +42,8 @@ const getStockInfo = async (symbol) => {
   try {
     const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonApiKey}`);
     const data = response.data;
-
     return {
       symbol: symbol,
-      price: data.lastQuotePrice,
       description: data.results.description
     };
   } catch (error) {
@@ -87,8 +86,8 @@ const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duratio
 
 // Function to insert stock info into MySQL database
 const insertStock = async (stock) => {
-  const sql = 'INSERT INTO Stocks (ticker, description, price) VALUES (?, ?, ?)';
-  const values = [stock.symbol, stock.description, 12.34]; // change to stock.price once we actually have prices
+  const sql = 'INSERT INTO Stocks (ticker, description) VALUES (?, ?)';
+  const values = [stock.symbol, stock.description];
   try {
     const result = await util.promisify(db.query).bind(db)(sql, values);
     return result;
@@ -99,6 +98,36 @@ const insertStock = async (stock) => {
     } else {
       throw error;
     }
+  }
+};
+
+// Function to fetch stock prices from the market data endpoint and insert into StockHistory table
+const insertStockHistory = async (stockId, high, low, open, close) => {
+  const sql = 'INSERT INTO StockHistory (stock_id, high, low, open, close) VALUES (?, ?, ?, ?, ?)';
+  const values = [stockId, high, low, open, close];
+  try {
+    const result = await util.promisify(db.query).bind(db)(sql, values);
+    return result;
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      console.log(`Skipping duplicate entry for stock_id ${stockId}`);
+      return null;
+    } else {
+      throw error;
+    }
+  }
+};
+
+// Function to update stock prices in the StockHistory table
+const updateStockHistory = async (stockId, high, low, open, close) => {
+  const sql = 'UPDATE StockHistory SET high = ?, low = ?, open = ?, close = ? WHERE stock_id = ?';
+  const values = [high, low, open, close, stockId];
+
+  try {
+    const result = await util.promisify(db.query).bind(db)(sql, values);
+    return result;
+  } catch (error) {
+    throw error;
   }
 };
 
@@ -117,6 +146,202 @@ const getStockFromDB = async (symbol) => {
   });
 };
 
+// Function to fetch stock history info for a given symbol from MySQL database
+const getStockHistoryFromDB = async (symbol) => {
+  const sql = 'SELECT * FROM StockHistory WHERE stock_id = ?';
+  const values = [symbol];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+};
+
+
+// Function to buy stock by shares and update portfolio
+const buyStockByShare = async (portfolioId, stockId, quantity) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const cashBalanceResult = await fetchCashBalance(portfolioId);
+      const stockPriceResult = await fetchStockPrice(stockId);
+
+      const cashBalance = cashBalanceResult[0].cash_value
+      const stockPrice = stockPriceResult[0].high
+      const totalCost = stockPrice * quantity;
+
+      console.log(cashBalance);
+      console.log(stockPrice);
+      console.log(totalCost);
+
+      if (cashBalance >= totalCost) {
+        const newCashBalance = cashBalance - totalCost
+        await updateCashBalance(portfolioId, newCashBalance);
+        await updateStockQuantity(portfolioId, stockId, quantity);
+        resolve(newCashBalance);
+
+        console.log("Purchase successful!")
+        console.log("New cash balance: " + newCashBalance);
+      } else {
+        reject(new Error('Insufficient balance'));
+      }
+    } catch(error) {
+      reject(error);
+    }
+  });
+};
+
+// Function to sell stock by shares and update portfolio
+const sellStockByShare = async (portfolioId, stockId, quantity) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const cashBalanceResult = await fetchCashBalance(portfolioId);
+      const stockPriceResult = await fetchStockPrice(stockId);
+
+      const cashBalance = parseFloat(cashBalanceResult[0].cash_value)
+      const stockPrice = stockPriceResult[0].high
+      const totalCost = stockPrice * quantity;
+
+      console.log(typeof(cashBalance));
+      console.log(typeof(totalCost));
+
+      const currentStockQuantity = await fetchStockQuantity(portfolioId, stockId); // number of shares portfolio currently has
+      if (currentStockQuantity >= quantity) {
+        const newCashBalance = cashBalance + totalCost
+        await updateCashBalance(portfolioId, newCashBalance);
+        await updateStockQuantity(portfolioId, stockId, -quantity);
+
+        console.log("Sale successful!")
+        console.log("New cash balance: " + newCashBalance);
+      } else {
+        reject(new Error('Insufficient stock quantity to sell'));
+      }
+    } catch(error) {
+      reject(error);
+    }
+  });
+};
+
+// Function to fetch user's portfolio's cash balance
+const fetchCashBalance = async (portfolioId) => {
+  const sql = 'SELECT cash_value FROM Portfolios WHERE portfolio_id = ?'
+  const values = [portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+}
+
+// Function to fetch stock price - (not sure which price to use so i picked high)
+function fetchStockPrice(stockId) {
+  const sql = 'SELECT high FROM StockHistory WHERE stock_id = ?';
+  const values = [stockId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+}
+
+// Function to fetch portfolio's stock quantity
+function fetchStockQuantity(portfolioId, stockId) {
+  const sql = 'SELECT shares FROM portfolioStock WHERE portfolio_id = ? AND stock_id = ?';
+  const values = [portfolioId, stockId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (results.length > 0) {
+          resolve(results[0].shares)
+        } else {
+          resolve(0);
+        }
+      }
+    });
+  });
+}
+
+// Function to update portfolio cash value
+function updateCashBalance(portfolioId, newBalance) {
+  const sql = `UPDATE portfolios SET cash_value = ? WHERE portfolio_id = ?`;
+  const values = [newBalance, portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+}
+
+// Function to update portfolio stock quantity
+async function updateStockQuantity(portfolioId, stockId, quantity) {
+  const records = await checkPortfolioStockRecord(portfolioId, stockId);
+  if (records.length > 0) {
+    // record exists, perform update
+    const current_shares = records[0].shares
+    const sql = `UPDATE portfolioStock SET shares = ? WHERE portfolio_id = ? AND stock_id = ?`
+    const values = [current_shares + quantity, portfolioId, stockId];
+
+    return new Promise((resolve, reject) => {
+      db.query(sql, values, (error, results, fields) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+          console.log("Record updated")
+        }
+      });
+    });
+  } else {
+    // record doesn't exist, perform insert
+    const sql = `INSERT INTO portfolioStock (portfolio_id, stock_id, shares) VALUES (?, ?, ?)`
+    const values = [portfolioId, stockId, quantity];
+
+    return new Promise((resolve, reject) => {
+      db.query(sql, values, (error, results, fields) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+          console.log("Record inserted")
+        }
+      });
+    });
+
+  }
+}
+
+// Function to check if portfolio stock record exists
+function checkPortfolioStockRecord(portfolioId, stockId) {
+  const sql = `SELECT * FROM portfolioStock WHERE portfolio_id = ?  AND stock_id = ?`
+  const values = [portfolioId, stockId,];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+}
+
 // Function to generate a new referral code
 function generateReferralCode() {
   // Generate a unique referral code according to your requirements
@@ -132,66 +357,6 @@ function generateReferralCode() {
 
   return referralCode;
 }
-
-
-// Function to update balance after buying/selling - NOT TESTED
-const updateBalance = (user_id, stock_ticker, numStocks, isBuying) => {
-  const userSql = 'SELECT balance FROM users WHERE user_id = ?';
-  const userValues = [user_id];
-  const transactionAmount = isBuying ? numStocks : -numStocks;
-
-  return new Promise((resolve, reject) => {
-    db.query(userSql, userValues, (userError, userResults) => {
-      if (userError) {
-        reject(userError);
-        return;
-      }
-
-      if (userResults.length === 0) {
-        reject(new Error(`User with ID ${user_id} not found`));
-        return;
-      }
-
-      const stockSql = 'SELECT price FROM stocks WHERE ticker = ?';
-      const stockValues = [stock_ticker];
-
-      db.query(stockSql, stockValues, (stockError, stockResults) => {
-        if (stockError) {
-          reject(stockError);
-          return;
-        }
-
-        if (stockResults.length === 0) {
-          reject(new Error(`Stock with ticker ${stock_ticker} not found`));
-          return;
-        }
-
-        const stockPrice = stockResults[0].price;
-        const currBalance = userResults[0].balance;
-        const transactionValue = stockPrice * numStocks;
-        const newBalance = currBalance + (transactionAmount * transactionValue);
-
-        if (newBalance < 0) {
-          reject(new Error('Insufficient balance'));
-          return;
-        }
-
-        const updateSql = 'UPDATE users SET balance = ? WHERE user_id = ?';
-        const updateValues = [newBalance, user_id];
-
-        db.query(updateSql, updateValues, (updateError) => {
-          if (updateError) {
-            reject(updateError);
-          } else {
-            resolve(newBalance);
-          }
-        });
-      });
-    });
-  });
-};
-
-
 
 
 // Route for handling user sign up requests
@@ -262,6 +427,11 @@ app.post("/signin", (req, res) => {
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
+
+  // test buyStockByShare function
+  // await(buyStockByShare(2, 112, 1));
+  await(sellStockByShare(2, 112, 1));
+
   const symbols = [];
   fs.createReadStream('constituents.csv')
     .pipe(csv())
@@ -270,7 +440,6 @@ const main = async () => {
     })
     .on('end', async() => {
       for (const symbol of symbols) {
-        console.log(symbol);
         const stock = await getStockInfo(symbol);
         const stockInDB = await getStockFromDB(symbol);
         if (stock !== null && (stockInDB === null || stockInDB.length === 0)) {
@@ -280,13 +449,41 @@ const main = async () => {
           } catch (error) {
             console.error(`Error inserting stock info for ${symbol}: ${error.message}`);
           }
-        } 
-        else {
+        } else {
           console.log(`Skipping duplicate entry for ${stock.symbol}`);
         }
+
+        if (stockInDB !== null && stockInDB.length > 0) {
+          const stockId = stockInDB[0].stock_id;
+          const date = '2023-06-30'; // specify the date for which you want to fetch the market data
+  
+          try {
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonApiKey}`);
+            const data = response.data;
+            const { high, low, open, close } = data;
+  
+            const stockHistoryInDB = await getStockHistoryFromDB(stockId, date);
+  
+            if (stockHistoryInDB !== null && stockHistoryInDB.length > 0) {
+              // Update existing stock history
+              await updateStockHistory(stockId, high, low, open, close);
+              console.log(`Updated stock history for ${symbol} in the database.`);
+            } else {
+              // Insert new stock history
+              await insertStockHistory(stockId, high, low, open, close);
+              console.log(`Inserted stock history for ${symbol} into the database.`);
+            }
+          } catch (error) {
+            console.error(`Error inserting/updating stock history for ${symbol}: ${error.message}`);
+          }
+        } else {
+          console.log(`No stock information found for ${symbol} in the database.`);
+        }
+  
         await sleep(delay);
       }
-    })
+    });
+    
 };
 
 
