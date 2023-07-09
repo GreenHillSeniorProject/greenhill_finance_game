@@ -20,8 +20,8 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.db_localhost,
-  database: "GreenHill_LocalHost",
+  password: config.db_password,
+  database: config.db_name,
   insecureAuth: true
 });
 
@@ -176,6 +176,27 @@ function generateReferralCode() {
 
   return referralCode;
 }
+
+//params required: 
+const createInviteEmail = async (first_name, last_name, email, referrer_id) => {
+
+    var subject = "Invitation";
+    var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
+    invited to a unique and exclusive gaming community by your peer, " + referrer_id.first_name + " " + referrer_id.last_name + ".\n\n\
+    \
+    Click here to download the Greenify app, or go the Apple Store or Andriod Market and download “Greenify”. \n\
+    Your invitation code is " + generateReferalCode() + ".\
+    \
+    As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
+    plus a chance to win a prize! \n\n\
+    \
+    Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\n\n\
+    \
+    Thank you for playing!";
+    var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    window.location.href = mailtoLink;
+};
+
 
 
 // Route for handling user sign up requests
