@@ -9,6 +9,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
+const referralCodeGenerator = require('referral-code-generator');
 //const jwt = require("jwt-simple");
 
 // Create Express app and set up middleware
@@ -177,14 +178,19 @@ function generateReferralCode() {
   return referralCode;
 }
 
+
+const generateReferalCode = async () => {
+  return referralCodeGenerator.alpha('lowercase', 4);
+}
+
 //params required: 
 const createInviteEmail = async (first_name, last_name, email, referrer_id) => {
 
-    var subject = "Invitation";
+    var subject = "Invitation to ";
     var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
     invited to a unique and exclusive gaming community by your peer, " + referrer_id.first_name + " " + referrer_id.last_name + ".\n\n\
     \
-    Click here to download the Greenify app, or go the Apple Store or Andriod Market and download “Greenify”. \n\
+    Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \n\
     Your invitation code is " + generateReferalCode() + ".\
     \
     As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
