@@ -166,16 +166,11 @@ const getStockHistoryFromDB = async (symbol) => {
 const buyStockByShare = async (portfolioId, stockId, quantity) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const cashBalanceResult = await fetchCashBalance(portfolioId);
-      const stockPriceResult = await fetchStockPrice(stockId);
-
-      const cashBalance = cashBalanceResult[0].cash_value
-      const stockPrice = stockPriceResult[0].high
+      const cashBalance = await fetchCashBalance(portfolioId);
+      const stockPrice = await fetchStockPrice(stockId);
       const totalCost = stockPrice * quantity;
 
-      console.log(cashBalance);
-      console.log(stockPrice);
-      console.log(totalCost);
+      console.log(`Original cash balance: ${cashBalance}`);
 
       if (cashBalance >= totalCost) {
         const newCashBalance = cashBalance - totalCost
@@ -183,7 +178,7 @@ const buyStockByShare = async (portfolioId, stockId, quantity) => {
         await updateStockQuantity(portfolioId, stockId, quantity);
         resolve(newCashBalance);
 
-        console.log("Purchase successful!")
+        console.log(`Purchased ${quantity} shares of stock ${stockId} for ${totalCost}`)
         console.log("New cash balance: " + newCashBalance);
       } else {
         reject(new Error('Insufficient balance'));
@@ -198,23 +193,19 @@ const buyStockByShare = async (portfolioId, stockId, quantity) => {
 const sellStockByShare = async (portfolioId, stockId, quantity) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const cashBalanceResult = await fetchCashBalance(portfolioId);
-      const stockPriceResult = await fetchStockPrice(stockId);
-
-      const cashBalance = parseFloat(cashBalanceResult[0].cash_value)
-      const stockPrice = stockPriceResult[0].high
+      const cashBalance = await fetchCashBalance(portfolioId);
+      const stockPrice = await fetchStockPrice(stockId);
       const totalCost = stockPrice * quantity;
-
-      console.log(typeof(cashBalance));
-      console.log(typeof(totalCost));
-
       const currentStockQuantity = await fetchStockQuantity(portfolioId, stockId); // number of shares portfolio currently has
+
+      console.log(`Original cash balance: ${cashBalance}`);
+
       if (currentStockQuantity >= quantity) {
         const newCashBalance = cashBalance + totalCost
         await updateCashBalance(portfolioId, newCashBalance);
         await updateStockQuantity(portfolioId, stockId, -quantity);
 
-        console.log("Sale successful!")
+        console.log(`Sold ${quantity} shares of stock ${stockId} for ${totalCost}`)
         console.log("New cash balance: " + newCashBalance);
       } else {
         reject(new Error('Insufficient stock quantity to sell'));
@@ -225,7 +216,34 @@ const sellStockByShare = async (portfolioId, stockId, quantity) => {
   });
 };
 
-// Function to fetch user's portfolio's cash balance
+// Function to buy stock by cash amount and update portfolio
+const buyStockByCashAmount = async (portfolioId, stockId, amount) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const stockPrice = await fetchStockPrice(stockId);
+      const stockQuantity = Math.floor(amount / stockPrice); // number of shares that can be purchased with given cash amount
+      await buyStockByShare(portfolioId, stockId, stockQuantity);
+    } catch(error) {
+      reject(error);
+    }
+  });
+};
+
+// Function to buy stock by cash amount and update portfolio
+const sellStockByCashAmount = async (portfolioId, stockId, amount) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const stockPrice = await fetchStockPrice(stockId);
+      const stockQuantity = Math.floor(amount / stockPrice); // number of shares that can be purchased with given cash amount
+      await sellStockByShare(portfolioId, stockId, stockQuantity);
+    } catch(error) {
+      reject(error);
+    }
+  });
+};
+
+
+// Function to fetch portfolio's cash balance
 const fetchCashBalance = async (portfolioId) => {
   const sql = 'SELECT cash_value FROM Portfolios WHERE portfolio_id = ?'
   const values = [portfolioId];
@@ -234,22 +252,22 @@ const fetchCashBalance = async (portfolioId) => {
       if (error) {
         reject(error);
       } else {
-        resolve(results);
+        resolve(parseFloat(results[0].cash_value, 2));
       }
     });
   });
 }
 
-// Function to fetch stock price - (not sure which price to use so i picked high)
+// Function to fetch stock price (based on opening price)
 function fetchStockPrice(stockId) {
-  const sql = 'SELECT high FROM StockHistory WHERE stock_id = ?';
+  const sql = 'SELECT open FROM StockHistory WHERE stock_id = ?';
   const values = [stockId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
       if (error) {
         reject(error);
       } else {
-        resolve(results);
+        resolve(results[0].open);
       }
     });
   });
@@ -304,7 +322,6 @@ async function updateStockQuantity(portfolioId, stockId, quantity) {
           reject(error);
         } else {
           resolve(results);
-          console.log("Record updated")
         }
       });
     });
@@ -319,11 +336,9 @@ async function updateStockQuantity(portfolioId, stockId, quantity) {
           reject(error);
         } else {
           resolve(results);
-          console.log("Record inserted")
         }
       });
     });
-
   }
 }
 
@@ -428,9 +443,11 @@ app.post("/signin", (req, res) => {
 const main = async () => {
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
 
-  // test buyStockByShare function
+  // Buy/sell test functions
   // await(buyStockByShare(2, 112, 1));
-  await(sellStockByShare(2, 112, 1));
+  // await(sellStockByShare(2, 112, 1));
+  // await(buyStockByCashAmount(2, 112, 300));
+  // await(sellStockByCashAmount(2, 112, 300));
 
   const symbols = [];
   fs.createReadStream('constituents.csv')
