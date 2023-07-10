@@ -184,14 +184,19 @@ const generateReferalCode = async () => {
 }
 
 //params required: 
-const createInviteEmail = async (first_name, last_name, email, referrer_id) => {
+app.get("/invite-email-mailto", (req, res) =>{
+  const {first_name, last_name, email} = req.body;
+  res.send(createInviteEmail(first_name, last_name, email));
+});
+
+const createInviteEmail = async (first_name, last_name, email) => {
 
     var subject = "Invitation to ";
     var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
-    invited to a unique and exclusive gaming community by your peer, " + referrer_id.first_name + " " + referrer_id.last_name + ".\n\n\
+    invited to a unique and exclusive gaming community!\n\n\
     \
     Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \n\
-    Your invitation code is " + generateReferalCode() + ".\
+    Your invitation code is " + await generateReferalCode() + ".\
     \
     As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
     plus a chance to win a prize! \n\n\
@@ -200,8 +205,9 @@ const createInviteEmail = async (first_name, last_name, email, referrer_id) => {
     \
     Thank you for playing!";
     var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-    window.location.href = mailtoLink;
-};
+    console.log(mailtoLink);
+
+  };
 
 
 
@@ -470,8 +476,9 @@ async function validatePassword(password, hashedPassword) {
 };
 */
 
-app.listen(3001, () => {
-  console.log("local host server running")
-});
+// app.listen(3001, () => {
+//   console.log("local host server running")
+// });
 
-main();
+// main();
+createInviteEmail("Andrew", "Maxwell", "arobmaxwell@gmail.com");
