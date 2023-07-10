@@ -180,7 +180,7 @@ function generateReferralCode() {
 
 
 const generateReferalCode = async () => {
-  return referralCodeGenerator.alpha('lowercase', 4);
+  return referralCodeGenerator.alpha('uppercase', 4);
 }
 
 //params required: 
@@ -191,23 +191,34 @@ app.get("/invite-email-mailto", (req, res) =>{
 
 const createInviteEmail = async (first_name, last_name, email) => {
 
-    var subject = "Invitation to ";
-    var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
-    invited to a unique and exclusive gaming community!\n\n\
-    \
-    Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \n\
-    Your invitation code is " + await generateReferalCode() + ".\
-    \
-    As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
-    plus a chance to win a prize! \n\n\
-    \
-    Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\n\n\
-    \
-    Thank you for playing!";
-    var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-    console.log(mailtoLink);
+  let code = await generateReferalCode();
 
-  };
+  var subject = "Invitation to Field Goal Finance";
+  var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
+  invited to a unique and exclusive gaming community!\n\n\
+  \
+  Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \n\
+  Your invitation code is " + code + ".\
+  \
+  As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
+  plus a chance to win a prize! \n\n\
+  \
+  Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\n\n\
+  \
+  Thank you for playing!";
+  var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+
+  //insert the invite to the Referrals table in the database
+  //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
+  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
+  const expiration_date = new Date();
+  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
+  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
+  await referralInsertQueryAsync(referralInsertQuery, [1, email, code, 'pending', expiration_date]);
+
+  
+
+};
 
 
 
