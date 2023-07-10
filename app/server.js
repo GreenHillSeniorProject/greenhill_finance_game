@@ -161,21 +161,134 @@ const getStockHistoryFromDB = async (symbol) => {
   });
 };
 
+/* IN PROGRESS
+// Function to validate if portfolio changes can be saved
+const validateSave = async (portfolioId) => {
+  const lastSave = await(fetchLastSave(portfolioId));
+  const currDate = new Date();
+  currDate.setHours(0,0,0,0);
+  console.log(lastSave);
+  console.log(currDate);
+  console.log(typeof(currDate));
+  if (lastSave >= currDate()) {
+    console.log("You have already made changes to your portfolio today. These changes will not be saved.")
+  }
+
+  // check num of unique stocks
+  // check non negative cash balance
+  const sql = 'SELECT last_save FROM Portfolios WHERE portfolio_id = ?';
+  const values = [portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results[0]);
+      }
+    });
+  });
+}
+
+// Function to see portfolio value results after a list of transactions
+const processActions = async (portfolioId, actions) => {
+  return new Promise(async (resolve, reject) => {
+    let transactionSuccessful = false;
+
+    try {
+      const portfolioValues = await fetchPortfolioValues(portfolioId);
+      let cashBalance = parseFloat(portfolioValues.cash_value, 2);
+      let assetValue = parseFloat(portfolioValues.asset_value, 2);
+      let portfolioValue = parseFloat(portfolioValues.portfolio_value, 2);
+
+      console.log(`Original cash balance: ${cashBalance}`);
+
+      // Create a savepoint to allow rolling back to the initial state
+      await createSavepoint();
+
+      for (const action of actions) {
+        console.log(action);
+        const { type, stockId, quantity, amount } = action;
+        const stockPrice = await fetchStockPrice(stockId);
+        let totalCost = stockPrice * quantity;
+
+        if (type === 'buyShare') {
+          if (portfolioValue >= totalCost) {
+            cashBalance -= totalCost;
+            assetValue += totalCost;
+            portfolioValue = cashBalance + assetValue;
+
+            await updateStockQuantity(portfolioId, stockId, quantity);
+            console.log(`Purchased ${quantity} shares of stock ${stockId} for ${totalCost}`);
+          } else {
+            console.log(`Skipping buyShare action for stock ${stockId} due to insufficient balance`);
+          }
+        } else if (type === 'sellShare') {
+          const currentStockQuantity = await fetchStockQuantity(portfolioId, stockId); // number of shares the portfolio currently has
+
+          if (currentStockQuantity >= quantity) {
+            cashBalance += totalCost;
+            assetValue -= totalCost;
+            portfolioValue = cashBalance + assetValue;
+
+            await updateStockQuantity(portfolioId, stockId, -quantity);
+            console.log(`Sold ${quantity} shares of stock ${stockId} for ${totalCost}`);
+          } else {
+            console.log(`Skipping sellShare action for stock ${stockId} due to insufficient stock quantity`);
+          }
+        } 
+      }
+
+      await updatePortfolioValues(portfolioId, assetValue, cashBalance, portfolioValue);
+      console.log("New cash balance: " + cashBalance);
+
+      if (cashBalance >= 0) {
+        resolve(cashBalance);
+      } else {
+        reject(new Error('Negative cash balance at the end of transactions'));
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+*/
+
+// Function to get timestamp of last portfolio save
+const fetchLastSave = async (portfolioId) => {
+  const sql = 'SELECT last_save FROM Portfolios WHERE portfolio_id = ?';
+  const values = [portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        console.log(typeof(results[0].last_save));
+        resolve(results[0].last_save);
+      }
+    });
+  });
+}
 
 // Function to buy stock by shares and update portfolio
 const buyStockByShare = async (portfolioId, stockId, quantity) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const cashBalance = await fetchCashBalance(portfolioId);
+      const portfolioValues = await fetchPortfolioValues(portfolioId);
+      const cashBalance = parseFloat(portfolioValues.cash_value, 2);
+      const assetValue = parseFloat(portfolioValues.asset_value, 2);
+      const portfolioValue = parseFloat(portfolioValues.portfolio_value, 2);
       const stockPrice = await fetchStockPrice(stockId);
       const totalCost = stockPrice * quantity;
 
       console.log(`Original cash balance: ${cashBalance}`);
 
-      if (cashBalance >= totalCost) {
+      if (portfolioValue >= totalCost) {
         const newCashBalance = cashBalance - totalCost
-        await updateCashBalance(portfolioId, newCashBalance);
+        const newAssetValue = assetValue + totalCost
+        const newPortfolioValue = newCashBalance + newAssetValue;
+
         await updateStockQuantity(portfolioId, stockId, quantity);
+        await updatePortfolioValues(portfolioId, newAssetValue, newCashBalance, newPortfolioValue);
         resolve(newCashBalance);
 
         console.log(`Purchased ${quantity} shares of stock ${stockId} for ${totalCost}`)
@@ -193,7 +306,9 @@ const buyStockByShare = async (portfolioId, stockId, quantity) => {
 const sellStockByShare = async (portfolioId, stockId, quantity) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const cashBalance = await fetchCashBalance(portfolioId);
+      const portfolioValues = await fetchPortfolioValues(portfolioId);
+      const cashBalance = parseFloat(portfolioValues.cash_value, 2);
+      const assetValue = parseFloat(portfolioValues.asset_value, 2);
       const stockPrice = await fetchStockPrice(stockId);
       const totalCost = stockPrice * quantity;
       const currentStockQuantity = await fetchStockQuantity(portfolioId, stockId); // number of shares portfolio currently has
@@ -202,8 +317,13 @@ const sellStockByShare = async (portfolioId, stockId, quantity) => {
 
       if (currentStockQuantity >= quantity) {
         const newCashBalance = cashBalance + totalCost
-        await updateCashBalance(portfolioId, newCashBalance);
+        const newAssetValue = assetValue - totalCost;
+        const newPortfolioValue = newCashBalance + newAssetValue;
+
         await updateStockQuantity(portfolioId, stockId, -quantity);
+        await updatePortfolioValues(portfolioId, newAssetValue, newCashBalance, newPortfolioValue);
+
+        resolve(newCashBalance);
 
         console.log(`Sold ${quantity} shares of stock ${stockId} for ${totalCost}`)
         console.log("New cash balance: " + newCashBalance);
@@ -222,7 +342,7 @@ const buyStockByCashAmount = async (portfolioId, stockId, amount) => {
     try {
       const stockPrice = await fetchStockPrice(stockId);
       const stockQuantity = Math.floor(amount / stockPrice); // number of shares that can be purchased with given cash amount
-      await buyStockByShare(portfolioId, stockId, stockQuantity);
+      resolve(await buyStockByShare(portfolioId, stockId, stockQuantity));
     } catch(error) {
       reject(error);
     }
@@ -235,24 +355,37 @@ const sellStockByCashAmount = async (portfolioId, stockId, amount) => {
     try {
       const stockPrice = await fetchStockPrice(stockId);
       const stockQuantity = Math.floor(amount / stockPrice); // number of shares that can be purchased with given cash amount
-      await sellStockByShare(portfolioId, stockId, stockQuantity);
+      resolve(await sellStockByShare(portfolioId, stockId, stockQuantity));
     } catch(error) {
       reject(error);
     }
   });
 };
 
-
-// Function to fetch portfolio's cash balance
-const fetchCashBalance = async (portfolioId) => {
-  const sql = 'SELECT cash_value FROM Portfolios WHERE portfolio_id = ?'
+const fetchPortfolioValues = async (portfolioId) => {
+  const sql = 'SELECT cash_value, asset_value, portfolio_value FROM Portfolios WHERE portfolio_id = ?'
   const values = [portfolioId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
       if (error) {
         reject(error);
       } else {
-        resolve(parseFloat(results[0].cash_value, 2));
+        resolve(results[0]);
+      }
+    });
+  });
+}
+
+const updatePortfolioValues = async (portfolioId, assetValue, cashValue, portfolioValue) => {
+  // const sql = 'SELECT asset_value, cash_value, portfolio_value FROM Portfolios WHERE portfolio_id = ?'
+  const sql = 'UPDATE Portfolios SET asset_value = ?, cash_value = ?, portfolio_value = ? WHERE portfolio_id = ?'
+  const values = [assetValue, cashValue, portfolioValue, portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results);
       }
     });
   });
@@ -267,7 +400,7 @@ function fetchStockPrice(stockId) {
       if (error) {
         reject(error);
       } else {
-        resolve(results[0].open);
+        resolve(parseFloat(results[0].open, 2));
       }
     });
   });
@@ -292,16 +425,20 @@ function fetchStockQuantity(portfolioId, stockId) {
   });
 }
 
-// Function to update portfolio cash value
-function updateCashBalance(portfolioId, newBalance) {
-  const sql = `UPDATE portfolios SET cash_value = ? WHERE portfolio_id = ?`;
-  const values = [newBalance, portfolioId];
+// Function to fetch number of unique stocks in porfolio
+function fetchStockCount(portfolioId) {
+  const sql = 'SELECT COUNT(*) as count FROM portfolioStock WHERE portfolio_id = ?';
+  const values = [portfolioId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
       if (error) {
         reject(error);
       } else {
-        resolve(results);
+        if (results.length > 0) {
+          resolve(results[0].count);
+        } else {
+          resolve(0);
+        }
       }
     });
   });
@@ -444,10 +581,35 @@ const main = async () => {
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
 
   // Buy/sell test functions
-  // await(buyStockByShare(2, 112, 1));
-  // await(sellStockByShare(2, 112, 1));
-  // await(buyStockByCashAmount(2, 112, 300));
-  // await(sellStockByCashAmount(2, 112, 300));
+  // await(buyStockByShare(4, 112, 1));
+  // await(sellStockByShare(4, 112, 1));
+  // await(buyStockByCashAmount(4, 112, 300));
+  // await(sellStockByCashAmount(4, 112, 203));
+  // console.log(await(fetchStockCount(4)));
+
+  // console.log(await(fetchLastSave(4)));
+  // console.log(await(validateSave(4)));
+
+  // console.log(await(fetchPortfolioValues(4)));
+
+  const portfolioId = 5; // Replace with the actual portfolio ID
+  const actions = [
+    { type: 'buyShare', stockId: 112, quantity: 0 },
+
+    { type: 'sellShare', stockId: 113, quantity: 0 }
+  ];
+
+  /*
+  console.log(await(processActions(portfolioId, actions)
+    .then((cashBalance) => {
+      console.log("Final cash balance:", cashBalance);
+      // Handle successful execution
+    })
+    .catch((error) => {
+      console.error("Error:", error.message);
+      // Handle error
+    })));
+    */
 
   const symbols = [];
   fs.createReadStream('constituents.csv')
