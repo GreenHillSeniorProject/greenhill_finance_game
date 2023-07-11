@@ -189,21 +189,22 @@ app.get("/invite-email-mailto", (req, res) =>{
   res.send(createInviteEmail(first_name, last_name, email));
 });
 
-const createInviteEmail = async (first_name, last_name, email) => {
+//shouldn't need the user_id once tokens become available
+const createInviteEmail = async (first_name, last_name, email, user_id) => {
 
   let code = await generateReferalCode();
 
   var subject = "Invitation to Field Goal Finance";
   var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
-  invited to a unique and exclusive gaming community!\n\n\
+  invited to a unique and exclusive gaming community!\
   \
-  Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \n\
+  Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \
   Your invitation code is " + code + ".\
   \
   As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
-  plus a chance to win a prize! \n\n\
+  plus a chance to win a prize!\
   \
-  Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\n\n\
+  Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\
   \
   Thank you for playing!";
   var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
@@ -214,10 +215,7 @@ const createInviteEmail = async (first_name, last_name, email) => {
   const expiration_date = new Date();
   expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
   const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-  await referralInsertQueryAsync(referralInsertQuery, [1, email, code, 'pending', expiration_date]);
-
-  
-
+  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
 };
 
 
@@ -248,12 +246,12 @@ app.post("/signup", async (req, res) => {
     const userQueryAsync = util.promisify(db.query).bind(db);
     await userQueryAsync(userQuery, [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
 
-    // Insert the referral information
-    const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-    const expiration_date = new Date();
-    expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-    const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-    await referralInsertQueryAsync(referralInsertQuery, [referrer_id, email, referral_code, 'pending', expiration_date]);
+    // // Insert the referral information
+    // const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
+    // const expiration_date = new Date();
+    // expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
+    // const referralInsertQueryAsync = util.promisify(db.query).bind(db);
+    // await referralInsertQueryAsync(referralInsertQuery, [referrer_id, email, referral_code, 'pending', expiration_date]);
 
     // Update the referral information
     const referralUpdateQuery = 'UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?';
