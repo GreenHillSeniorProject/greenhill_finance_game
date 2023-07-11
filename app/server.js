@@ -216,6 +216,8 @@ const createInviteEmail = async (first_name, last_name, email, user_id) => {
   expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
   const referralInsertQueryAsync = util.promisify(db.query).bind(db);
   await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
+
+  res.send(mailtoLink);
 };
 
 
@@ -489,5 +491,4 @@ async function validatePassword(password, hashedPassword) {
 //   console.log("local host server running")
 // });
 
-// main();
-createInviteEmail("Andrew", "Maxwell", "arobmaxwell@gmail.com");
+main();
