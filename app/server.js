@@ -632,9 +632,9 @@ const main = async () => {
 
   // console.log(await(fetchPortfolioValues(4)));
 
-  console.log(await(fetchPastPortfolios(1)));
-  console.log(await(fetchGameInfoForPortfolio(1)));
-  console.log(await(fetchGamePorfolios(1)));
+  // console.log(await(fetchPastPortfolios(1)));
+  // console.log(await(fetchGameInfoForPortfolio(1)));
+  // console.log(await(fetchGamePorfolios(1)));
 
   //const portfolioId = 5; // Replace with the actual portfolio ID
   /*
