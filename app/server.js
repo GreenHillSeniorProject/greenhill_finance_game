@@ -476,6 +476,64 @@ const updatePortfolioDayValue = async (portfolioId) => {
   });
 }
 
+// Function to fetch user's past portfolios/games in order of most recent game end date
+const fetchPastPortfolios = (userId) => {
+  const sql = 'SELECT * FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? ORDER BY g.end_date DESC;';
+  const values = [userId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+const fetchGameInfoForPortfolio = (portfolioId) => {
+  const sql = 'SELECT * FROM gameInfo g JOIN portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
+  const values = [portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+
+// Function to fetch all portfolios in a game in order of highest portfolio value
+const fetchGamePorfolios = (gameId) => {
+  const sql = 'SELECT * FROM portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
+  const values = [gameId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+
 // Function to generate a new referral code
 function generateReferralCode() {
   // Generate a unique referral code according to your requirements
@@ -574,12 +632,18 @@ const main = async () => {
 
   // console.log(await(fetchPortfolioValues(4)));
 
-  const portfolioId = 5; // Replace with the actual portfolio ID
+  console.log(await(fetchPastPortfolios(1)));
+  console.log(await(fetchGameInfoForPortfolio(1)));
+  console.log(await(fetchGamePorfolios(1)));
+
+  //const portfolioId = 5; // Replace with the actual portfolio ID
+  /*
   const actions = [
     { type: 'buyShare', stockId: 112, quantity: 0 },
 
     { type: 'sellShare', stockId: 113, quantity: 0 }
   ];
+  */
 
   /*
   console.log(await(processActions(portfolioId, actions)
