@@ -618,6 +618,28 @@ app.post("/signin", (req, res) => {
 
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
+
+  // Schedule task to record end of day portfolio values
+  var task = cron.schedule('0 17 * * *', async () => {
+    const sql = `UPDATE portfolios SET yesterday_value = portfolio_value`;
+    try {
+      const results = await new Promise((resolve, reject) => {
+        db.query(sql, (error, results, fields) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(results);
+          }
+        });
+      });
+      console.log(results);
+    } catch (error) {
+      console.error(error);
+    }
+  });
+      
+  task.start();
+  
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
 
   // Buy/sell test functions
@@ -708,7 +730,6 @@ const main = async () => {
         await sleep(delay);
       }
     });
-    
 };
 
 /*
