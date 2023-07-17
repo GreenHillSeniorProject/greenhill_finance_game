@@ -500,7 +500,7 @@ const generateReferalCode = async () => {
 
 //params required: 
 app.get("/invite-mailto", (req, res) =>{
-  const {first_name, last_name, email} = req.body;
+  const {first_name, last_name, email} = req.query;
   //1 is a dummy id for now, shouldn't affect integration testing
   res.send(createInviteEmail(first_name, last_name, email, 1));
 });
@@ -531,10 +531,11 @@ const createInviteEmail = async (first_name, last_name, email, user_id) => {
   // const expiration_date = new Date();
   // expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
   // const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-  console.log(mailtoLink);
-  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
+  // console.log(mailtoLink);
+  // await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
 
-  res.json({mailtoLink});
+  console.log(mailtoLink);
+  return mailtoLink;
 };
 
 
