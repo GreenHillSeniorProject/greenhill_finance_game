@@ -392,7 +392,7 @@ const fetchStockQuantity = (portfolioId, stockId) => {
   });
 };
 
-// Function to fetch number of unique stocks in porfolio
+// Function to fetch number of unique stocks in portfolio
 const fetchStockCount = (portfolioId) => {
   const sql = 'SELECT COUNT(*) as count FROM portfolioStock WHERE portfolio_id = ?';
   const values = [portfolioId];
@@ -515,8 +515,27 @@ const fetchGameInfoForPortfolio = (portfolioId) => {
 
 
 // Function to fetch all portfolios in a game in order of highest portfolio value
-const fetchGamePorfolios = (gameId) => {
+const fetchGamePortfolios = (gameId) => {
   const sql = 'SELECT * FROM portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
+  const values = [gameId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+// Function to fetch all users in a game in order of highest portfolio value
+const fetchGameUsers = (gameId) => {
+  const sql = 'SELECT u.username, p.portfolio_value FROM users u JOIN portfolios p ON u.user_id = p.user_id JOIN gameinfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
   const values = [gameId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -656,7 +675,8 @@ const main = async () => {
 
   // console.log(await(fetchPastPortfolios(1)));
   // console.log(await(fetchGameInfoForPortfolio(1)));
-  // console.log(await(fetchGamePorfolios(1)));
+  // console.log(await(fetchGamePortfolios(1)));
+  console.log(await(fetchGameUsers(1)));
 
   //const portfolioId = 5; // Replace with the actual portfolio ID
   /*
