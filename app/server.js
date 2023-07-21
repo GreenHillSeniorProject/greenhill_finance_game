@@ -32,7 +32,7 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.password,
+  password: config.localhost_password,
   database: config.db_name,
   insecureAuth: true
 });
@@ -804,8 +804,8 @@ async function validatePassword(password, hashedPassword) {
 };
 */
 
-// app.listen(3001, () => {
-//   console.log("local host server running")
-// });
+app.listen(3001, () => {
+   console.log("local host server running")
+});
 
 main();
