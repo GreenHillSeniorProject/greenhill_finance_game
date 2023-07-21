@@ -65,7 +65,7 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-const delay = 5 * 60 * 1000; // 5 minutes
+const delay = 1000 * 12; // 12 seconds
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
@@ -660,7 +660,7 @@ const main = async () => {
 
         if (stockInDB !== null && stockInDB.length > 0) {
           const stockId = stockInDB[0].stock_id;
-          const date = '2023-06-30'; // specify the date for which you want to fetch the market data
+          const date = '2023-07-18'; // specify the date for which you want to fetch the market data
   
           try {
             const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonApiKey}`);
