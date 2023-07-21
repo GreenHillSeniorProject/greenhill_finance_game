@@ -663,7 +663,7 @@ const main = async () => {
           const date = '2023-07-18'; // specify the date for which you want to fetch the market data
   
           try {
-            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonApiKey}`);
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
             const data = response.data;
             const { high, low, open, close } = data;
   
