@@ -393,7 +393,7 @@ const fetchStockQuantity = (portfolioId, stockId) => {
   });
 };
 
-// Function to fetch number of unique stocks in porfolio
+// Function to fetch number of unique stocks in portfolio
 const fetchStockCount = (portfolioId) => {
   const sql = 'SELECT COUNT(*) as count FROM portfolioStock WHERE portfolio_id = ?';
   const values = [portfolioId];
@@ -476,6 +476,83 @@ const updatePortfolioDayValue = async (portfolioId) => {
     });
   });
 }
+
+// Function to fetch user's past portfolios/games in order of most recent game end date
+const fetchPastPortfolios = (userId) => {
+  const sql = 'SELECT * FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? ORDER BY g.end_date DESC;';
+  const values = [userId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+const fetchGameInfoForPortfolio = (portfolioId) => {
+  const sql = 'SELECT * FROM gameInfo g JOIN portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
+  const values = [portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+
+// Function to fetch all portfolios in a game in order of highest portfolio value
+const fetchGamePortfolios = (gameId) => {
+  const sql = 'SELECT * FROM portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
+  const values = [gameId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+// Function to fetch all users in a game in order of highest portfolio value
+const fetchGameUsers = (gameId) => {
+  const sql = 'SELECT u.username, p.portfolio_value FROM users u JOIN portfolios p ON u.user_id = p.user_id JOIN gameinfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
+  const values = [gameId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
 
 // Function to generate a new referral code
 function generateReferralCode() {
@@ -604,6 +681,28 @@ app.post("/signin", (req, res) => {
 
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
+
+  // Schedule task to record end of day portfolio values
+  var task = cron.schedule('0 17 * * *', async () => {
+    const sql = `UPDATE portfolios SET yesterday_value = portfolio_value`;
+    try {
+      const results = await new Promise((resolve, reject) => {
+        db.query(sql, (error, results, fields) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(results);
+          }
+        });
+      });
+      console.log(results);
+    } catch (error) {
+      console.error(error);
+    }
+  });
+      
+  task.start();
+  
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
 
   // Buy/sell test functions
@@ -618,12 +717,19 @@ const main = async () => {
 
   // console.log(await(fetchPortfolioValues(4)));
 
-  const portfolioId = 5; // Replace with the actual portfolio ID
+  // console.log(await(fetchPastPortfolios(1)));
+  // console.log(await(fetchGameInfoForPortfolio(1)));
+  // console.log(await(fetchGamePortfolios(1)));
+  console.log(await(fetchGameUsers(1)));
+
+  //const portfolioId = 5; // Replace with the actual portfolio ID
+  /*
   const actions = [
     { type: 'buyShare', stockId: 112, quantity: 0 },
 
     { type: 'sellShare', stockId: 113, quantity: 0 }
   ];
+  */
 
   /*
   console.log(await(processActions(portfolioId, actions)
@@ -688,7 +794,6 @@ const main = async () => {
         await sleep(delay);
       }
     });
-    
 };
 
 /*
