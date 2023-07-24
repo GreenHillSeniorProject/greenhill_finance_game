@@ -11,7 +11,9 @@ const util = require('util');
 const config = require('../config.json');
 const referralCodeGenerator = require('referral-code-generator');
 const cron = require('node-cron');
-//const jwt = require("jwt-simple");
+let jwt = require('jsonwebtoken')
+
+const SECRET_KEY = config.secret_key;
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -536,6 +538,9 @@ const createInviteEmail = async (first_name, last_name, email, user_id) => {
 };
 
 
+const createUserToken = async (payload) => {
+  return jwt.sign(payload, SECRET_KEY, )
+}
 
 // Route for handling user sign up requests
 app.post("/signup", async (req, res) => {
@@ -556,7 +561,7 @@ app.post("/signup", async (req, res) => {
     }
 
     const referrer_id = referralResult[0].referrer_id;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = bcrypt.hashSync(password, 10);
 
     // Insert the user into the database
     const userQuery = 'INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)';
