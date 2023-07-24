@@ -9,6 +9,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
+const referralCodeGenerator = require('referral-code-generator');
 const cron = require('node-cron');
 //const jwt = require("jwt-simple");
 
@@ -31,8 +32,8 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.password,
-  database: "greenhill_localhost",
+  password: config.localhost_password,
+  database: config.db_name,
   insecureAuth: true
 });
 
@@ -51,7 +52,7 @@ app.get('/faq', (req, res) => {
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
   try {
-    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonApiKey}`);
+    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
     const data = response.data;
     return {
       symbol: symbol,
@@ -64,7 +65,7 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-const delay = 5 * 60 * 1000; // 5 minutes
+const delay = 1000 * 12; // 12 seconds
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
@@ -570,6 +571,49 @@ function generateReferralCode() {
 }
 
 
+const generateReferalCode = async () => {
+  return referralCodeGenerator.alpha('uppercase', 4);
+}
+
+//params required: 
+app.get("/invite-email-mailto", (req, res) =>{
+  const {first_name, last_name, email} = req.body;
+  res.send(createInviteEmail(first_name, last_name, email));
+});
+
+//shouldn't need the user_id once tokens become available
+const createInviteEmail = async (first_name, last_name, email, user_id) => {
+
+  let code = await generateReferalCode();
+
+  var subject = "Invitation to Field Goal Finance";
+  var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
+  invited to a unique and exclusive gaming community!\
+  \
+  Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \
+  Your invitation code is " + code + ".\
+  \
+  As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
+  plus a chance to win a prize!\
+  \
+  Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\
+  \
+  Thank you for playing!";
+  var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+
+  //insert the invite to the Referrals table in the database
+  //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
+  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
+  const expiration_date = new Date();
+  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
+  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
+  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
+
+  res.send(mailtoLink);
+};
+
+
+
 // Route for handling user sign up requests
 app.post("/signup", async (req, res) => {
   const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
@@ -596,12 +640,12 @@ app.post("/signup", async (req, res) => {
     const userQueryAsync = util.promisify(db.query).bind(db);
     await userQueryAsync(userQuery, [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
 
-    // Insert the referral information
-    const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-    const expiration_date = new Date();
-    expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-    const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-    await referralInsertQueryAsync(referralInsertQuery, [referrer_id, email, referral_code, 'pending', expiration_date]);
+    // // Insert the referral information
+    // const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
+    // const expiration_date = new Date();
+    // expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
+    // const referralInsertQueryAsync = util.promisify(db.query).bind(db);
+    // await referralInsertQueryAsync(referralInsertQuery, [referrer_id, email, referral_code, 'pending', expiration_date]);
 
     // Update the referral information
     const referralUpdateQuery = 'UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?';
@@ -722,10 +766,10 @@ const main = async () => {
 
         if (stockInDB !== null && stockInDB.length > 0) {
           const stockId = stockInDB[0].stock_id;
-          const date = '2023-06-30'; // specify the date for which you want to fetch the market data
+          const date = '2023-07-18'; // specify the date for which you want to fetch the market data
   
           try {
-            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonApiKey}`);
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
             const data = response.data;
             const { high, low, open, close } = data;
   
@@ -866,7 +910,7 @@ async function validatePassword(password, hashedPassword) {
 */
 
 app.listen(3001, () => {
-  console.log("local host server running")
+   console.log("local host server running")
 });
 
 main();
