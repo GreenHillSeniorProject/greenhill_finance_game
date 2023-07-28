@@ -154,79 +154,51 @@ const validateSave = async (portfolioId) => {
   currDate.setHours(0,0,0,0);
   console.log(lastSave);
   console.log(currDate);
+
+  const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await(fetchGameInfoForPortfolio(portfolioId));
+
+
+  // check if portfolio has been saved today
   if (lastSave >= currDate()) {
     console.log("You have already made changes to your portfolio today. These changes will not be saved.")
   }
 
+
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
+  if (numStocks < min_stocks || numStocks > max_stocks) {
+    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`)
+  }
   
-  // check non negative cash balance
+  // check non-negative final cash balance (assuming a valid list of transactions is given)
+  const final_cash_balance = await(processActions(portfolioId, actions));
+  if (final_cash_balance < 0) {
+    console.log("Cannot have a negative cash balance.")
+  }
 }
-/*
-// Function to see portfolio value results after a list of transactions
+
+// Function to see portfolio value results after a list of transactions [id1: -2, id2: 2]
 const processActions = async (portfolioId, actions) => {
-  return new Promise(async (resolve, reject) => {
-    let transactionSuccessful = false;
+  try {
+    const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
+    let cashBalance = parseFloat(cash_value, 2);
+    console.log(actions);
+    console.log(`Cash balance: ${cashBalance}`);
 
-    try {
-      const portfolioValues = await fetchPortfolioValues(portfolioId);
-      let cashBalance = parseFloat(portfolioValues.cash_value, 2);
-      let assetValue = parseFloat(portfolioValues.asset_value, 2);
-      let portfolioValue = parseFloat(portfolioValues.portfolio_value, 2);
-
-      console.log(`Original cash balance: ${cashBalance}`);
-
-      // Create a savepoint to allow rolling back to the initial state
-      await createSavepoint();
-
-      for (const action of actions) {
-        console.log(action);
-        const { type, stockId, quantity, amount } = action;
-        const stockPrice = await fetchStockPrice(stockId);
-        let totalCost = stockPrice * quantity;
-
-        if (type === 'buyShare') {
-          if (portfolioValue >= totalCost) {
-            cashBalance -= totalCost;
-            assetValue += totalCost;
-            portfolioValue = cashBalance + assetValue;
-
-            await updateStockQuantity(portfolioId, stockId, quantity);
-            console.log(`Purchased ${quantity} shares of stock ${stockId} for ${totalCost}`);
-          } else {
-            console.log(`Skipping buyShare action for stock ${stockId} due to insufficient balance`);
-          }
-        } else if (type === 'sellShare') {
-          const currentStockQuantity = await fetchStockQuantity(portfolioId, stockId); // number of shares the portfolio currently has
-
-          if (currentStockQuantity >= quantity) {
-            cashBalance += totalCost;
-            assetValue -= totalCost;
-            portfolioValue = cashBalance + assetValue;
-
-            await updateStockQuantity(portfolioId, stockId, -quantity);
-            console.log(`Sold ${quantity} shares of stock ${stockId} for ${totalCost}`);
-          } else {
-            console.log(`Skipping sellShare action for stock ${stockId} due to insufficient stock quantity`);
-          }
-        } 
-      }
-
-      await updatePortfolioValues(portfolioId, assetValue, cashBalance, portfolioValue);
-      console.log("New cash balance: " + cashBalance);
-
-      if (cashBalance >= 0) {
-        resolve(cashBalance);
-      } else {
-        reject(new Error('Negative cash balance at the end of transactions'));
-      }
-    } catch (error) {
-      reject(error);
+    for (const stock_id in actions) {
+      const stockPrice = await fetchStockPrice(stock_id);
+      console.log(stockPrice);
+      console.log(actions[stock_id]);
+      cashBalance -= stockPrice * actions[stock_id], 2;
     }
-  });
+    cashBalance = cashBalance.toFixed(2);
+    console.log(cashBalance);
+
+    return cashBalance;
+  } catch (error) {
+    throw error;
+  }
 };
-*/
 
 // Function to get timestamp of last portfolio save
 const fetchLastSave = async (portfolioId) => {
@@ -249,9 +221,9 @@ const buyStockByShare = async (portfolioId, stockId, quantity) => {
   // Fetch portfolio values
   try {
     const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
-    const cashBalance = parseFloat(cash_value, 2);
-    const assetValue = parseFloat(asset_value, 2);
-    const portfolioValue = parseFloat(portfolio_value, 2);
+    const cashBalance = parseFloat(cash_value,2);
+    const assetValue = parseFloat(asset_value,2);
+    const portfolioValue = parseFloat(portfolio_value,2);
 
     console.log(`Original cash balance: ${cashBalance}`);
 
@@ -553,6 +525,18 @@ const fetchGameUsers = (gameId) => {
   });
 };
 
+const fetchUserId = async (userId) => {
+  const sql = 'SELECT first_name, last_name, username FROM users WHERE user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
 
 // Function to generate a new referral code
 function generateReferralCode() {
@@ -679,6 +663,51 @@ app.post("/signin", (req, res) => {
     })
 })
 
+
+// Route for getting user's homepage
+app.get('/homepage/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const user = await fetchUserId(userId);
+
+    if (user) {
+      res.json(user);
+    } else {
+      res.send({ message: "Account does not exist" });
+    }
+  } catch (error) {
+    res.send({ err: error.message });
+  }
+});
+
+
+
+// Route for getting portfolio info
+app.get('/portfolio', async (req, res) => {
+  const userId = req.params.userId;
+
+  // Check if user ID is missing/invalid
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing user token' });
+  }
+
+  try {
+    const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
+    const stocks = await fetchStocksInPortfolio(portfolioId);
+
+    // Prepare response
+    const portfolioInfo = {
+      portfolio_id: portfolioId,
+      cash_value: cash_value,
+      portfolio_value: portfolio_value
+    };
+
+    res.json(portfolioInfo);
+  } catch (error) {
+    console.log('Error fetching portfolio information');
+  }
+});
+
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
 
@@ -702,11 +731,15 @@ const main = async () => {
   });
       
   task.start();
+
+  console.log(await(fetchUserId(2)));
   
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
 
   // Buy/sell test functions
-  // await(buyStockByShare(4, 112, 1));
+  // await(buyStockByShare(7, 112, 2));
+  //await(buyStockByShare(7, 113, 2));
+  // await(buyStockByShare(7, 115, 2));
   // await(sellStockByShare(4, 112, 1));
   // await(buyStockByCashAmount(4, 112, 300));
   // await(sellStockByCashAmount(4, 112, 203));
@@ -720,7 +753,13 @@ const main = async () => {
   // console.log(await(fetchPastPortfolios(1)));
   // console.log(await(fetchGameInfoForPortfolio(1)));
   // console.log(await(fetchGamePortfolios(1)));
-  console.log(await(fetchGameUsers(1)));
+  // console.log(await(fetchGameUsers(1)));
+  const actions = {
+    112: -6,
+    113: -4,
+    115: 200
+  };
+  console.log(await(processActions(7, actions)));
 
   //const portfolioId = 5; // Replace with the actual portfolio ID
   /*
