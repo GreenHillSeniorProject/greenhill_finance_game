@@ -524,6 +524,18 @@ const fetchGameUsers = (gameId) => {
   });
 };
 
+const fetchUserId = async (userId) => {
+  const sql = 'SELECT first_name, last_name, username FROM users WHERE user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
 
 // Function to generate a new referral code
 function generateReferralCode() {
@@ -607,6 +619,51 @@ app.post("/signin", (req, res) => {
     })
 })
 
+
+// Route for getting user's homepage
+app.get('/homepage/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const user = await fetchUserId(userId);
+
+    if (user) {
+      res.json(user);
+    } else {
+      res.send({ message: "Account does not exist" });
+    }
+  } catch (error) {
+    res.send({ err: error.message });
+  }
+});
+
+
+
+// Route for getting portfolio info
+app.get('/portfolio', async (req, res) => {
+  const userId = req.params.userId;
+
+  // Check if user ID is missing/invalid
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing user token' });
+  }
+
+  try {
+    const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
+    const stocks = await fetchStocksInPortfolio(portfolioId);
+
+    // Prepare response
+    const portfolioInfo = {
+      portfolio_id: portfolioId,
+      cash_value: cash_value,
+      portfolio_value: portfolio_value
+    };
+
+    res.json(portfolioInfo);
+  } catch (error) {
+    console.log('Error fetching portfolio information');
+  }
+});
+
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
 
@@ -630,6 +687,8 @@ const main = async () => {
   });
       
   task.start();
+
+  console.log(await(fetchUserId(2)));
   
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
 
