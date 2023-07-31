@@ -583,6 +583,37 @@ const fetchUserInfo = async (userId) => {
   }
 };
 
+//Function to calculate day delta
+const fetchDayDelta = async (userId, portfolio_id) => {
+  const sql = 'SELECT portfolio_value-yesterday_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
+//Function to calculate week delta
+const fetchWeekDelta = async (userId, portfolio_id) => {
+  const sql = 'SELECT portfolio_value-last_week_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
+//Function to calculate stats and rank
+
+
 // Function to generate a new referral code
 function generateReferralCode() {
   // Generate a unique referral code according to your requirements
@@ -707,6 +738,30 @@ app.post("/signin", (req, res) => {
       }
     })
 })
+
+//Route for updating advisor profile
+app.post('/editprofile/:userId', async (req, res) => {\
+  try {
+    const userId = req.params.userId;
+    const user = await await fetchUserInfo(userId);
+    const username = req.body.username;
+    const phone_number = req.body.phone_number;
+    const password = req.body.password;
+    const rePassword =  req.body.rePassword;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    if (password != rePassword) {
+      return res.json({error: "Passwords do not match"});
+    }
+    if (!user) {
+      res.send({ message: "Account does not exist" });
+    }
+    const sql = 'UPDATE users SET username = ?, phone_number = ?, password = ? WHERE user_id = ?';
+    const sqlAsync = util.promisify(db.query).bind(db);
+    await sqlAsync(sql, [username,phone_number,hashedPassword,userId]);
+  } catch (error) {
+    res.send({ err: error.message });
+  }
+});
 
 
 // Route for getting user's homepage
@@ -877,119 +932,6 @@ const main = async () => {
       }
     });
 };
-
-/*
-app.post("/create", (req, res) => {
-  const type = req.body.type;
-  const fund = req.body.fund;
-  const start = req.body.start;
-  const end = req.body.end;
-  const sponsor = req.body.sponsor;
-
-  var createTable = 'INSERT INTO GameInfo (game_id, employee_id, starting_cash, start_date, end_date, sponsor) SELECT ?, employee_id, ?, ?, ?, ? FROM Users'
-  var values = [type, fund, start, end, sponsor];
-
-  db.query(createTable, values,
-    (err, result) => {
-      if (err) {
-        res.send({ err: err });
-      }
-      console.log("Game created.")
-    })
-});
-
-app.post("/changeAdvisorInfo", (req, res) => {
-  let token = req.body.token;
-  let newUsername = req.body.username;
-  let newPhoneNumber = req.body.phone_number;
-  let newPassword = req.body.password;
-
-    let user = await getUserFromToken(token);
-
-    if (user === "false") {
-        res.status(FAILSTATUS);
-        return res.json({error: "Account does not exist"});
-    } 
-
-    if (user === "error") {
-        res.status(ERRORSTATUS);
-        return res.json({error: "Invalid token"});
-    }
-
-    let id = user.employee_id;
-    let newHashedPassword = await bcrypt.hash(newPassword, 10);
-    let sql = `UPDATE Users SET username = ?, phone_number = ?, password = ?  WHERE id = ?`;
-    let values = [newUsername, newPhoneNumber, newHashedPassword, id];
-
-    if (killCreated === "error") {
-        res.status(ERRORSTATUS);
-        return res.json({error: "Something went wrong"});
-    }
-
-    res.status(SUCCESSSTATUS);
-    return res.json({info: newUsername, success: "Changed"});
-});
-
-async function getUserFromToken(token) {
-  try {
-      let decoded = jwt.decode(token, SECRET);
-
-      let user = await getValue("Users", "email", decoded.email);
-
-      if (user === "false") {
-          return "false";
-      }
-
-      let hashedPassword = user[0].password; 
-      let accountExists = await validatePassword(decoded.password, hashedPassword);
-
-      if (accountExists === "true") {
-          return user[0];
-      }
-
-      return "false";
-
-  } catch (err) {
-      return "error";
-  }
-};
-
-async function getValue(table, category, value) {
-  let text = `SELECT * FROM ${table} WHERE ${category} = $1`;
-  let values = [value];
-
-  try {
-      const res = await pool.query(text, values);
-      
-      if (res.rows.length > 0) {
-          return res.rows;
-      }
-
-      return "false";
-
-  } catch (err) {
-      console.log(err.stack);
-      return "error";
-  } 
-}
-
-
-async function validatePassword(password, hashedPassword) {
-  try {
-      const res = await bcrypt.compare(password, hashedPassword);
-      
-      if (res) {
-          return "true";
-      }
-
-      return "false";
-
-  } catch (err) {
-      console.log(err.stack);
-      return "error";
-  }
-};
-*/
 
 app.listen(3001, () => {
    console.log("local host server running")
