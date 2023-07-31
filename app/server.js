@@ -737,10 +737,10 @@ app.post("/signin", (req, res) => {
         res.send({ message: "Account does not exist" });
       }
     })
-})
+});
 
 //Route for updating advisor profile
-app.post('/editprofile/:userId', async (req, res) => {\
+app.post('/editprofile/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     const user = await await fetchUserInfo(userId);
