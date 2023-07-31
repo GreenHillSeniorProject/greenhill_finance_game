@@ -449,7 +449,7 @@ const updatePortfolioDayValue = async (portfolioId) => {
   });
 }
 
-// Function to fetch user's past portfolios/games in order of most recent game end date
+// Function to fetch user's past portfolios in order of most recent game end date
 const fetchPastPortfolios = (userId) => {
   const sql = 'SELECT * FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? ORDER BY g.end_date DESC;';
   const values = [userId];
@@ -467,6 +467,25 @@ const fetchPastPortfolios = (userId) => {
     });
   });
 };
+
+// Function to fetch user's past games in order of most recent game end date
+const fetchPastGames = (userId) => {
+  const sql = 'SELECT g.game_name, g.sponsor, g.type FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? and p.game_id != (SELECT current_game from users where user_id = ?) ORDER BY g.end_date DESC;';
+  const values = [userId, userId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+}
 
 const fetchGameInfoForPortfolio = (portfolioId) => {
   const sql = 'SELECT * FROM gameInfo g JOIN portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
@@ -506,9 +525,35 @@ const fetchGamePortfolios = (gameId) => {
   });
 };
 
+// Function to fetch current game
+const fetchCurrentGame = async (userId) => {
+  const sql = 'SELECT current_game from users WHERE user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0].current_game;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+// Function to fetch current game users in order of highest portfolio value
+const fetchCurrentGameUsers = async (userId) => {
+  try {
+    const currGame = await(fetchCurrentGame(userId));
+    const currGameUsers = await(fetchGameUsers(currGame));
+    return currGameUsers;
+  } catch (error) {
+    throw error;
+  }
+}
+
 // Function to fetch all users in a game in order of highest portfolio value
 const fetchGameUsers = (gameId) => {
-  const sql = 'SELECT u.username, p.portfolio_value FROM users u JOIN portfolios p ON u.user_id = p.user_id JOIN gameinfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
+  const sql = 'SELECT u.username, p.portfolio_value, g.game_id FROM users u JOIN portfolios p ON u.user_id = p.user_id JOIN gameinfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
   const values = [gameId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -525,7 +570,7 @@ const fetchGameUsers = (gameId) => {
   });
 };
 
-const fetchUserId = async (userId) => {
+const fetchUserInfo = async (userId) => {
   const sql = 'SELECT first_name, last_name, username FROM users WHERE user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
@@ -668,10 +713,14 @@ app.post("/signin", (req, res) => {
 app.get('/homepage/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
-    const user = await fetchUserId(userId);
+    const user = await fetchUserInfo(userId);
+    const currGameUsers = await fetchCurrentGameUsers(userId);
+    const pastGames = await fetchPastGames(userId);
+
+    const data = { user, currGameUsers, pastGames};
 
     if (user) {
-      res.json(user);
+      res.json(data);
     } else {
       res.send({ message: "Account does not exist" });
     }
@@ -732,7 +781,9 @@ const main = async () => {
       
   task.start();
 
-  console.log(await(fetchUserId(2)));
+  console.log(await(fetchUserInfo(2)));
+  console.log(await(fetchPastGames(2)));
+
   
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
 
@@ -759,7 +810,8 @@ const main = async () => {
     113: -4,
     115: 200
   };
-  console.log(await(processActions(7, actions)));
+  //console.log(await(processActions(7, actions)));
+  console.log(await(fetchCurrentGameUsers(2)));
 
   //const portfolioId = 5; // Replace with the actual portfolio ID
   /*
