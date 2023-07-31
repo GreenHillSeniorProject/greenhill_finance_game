@@ -318,6 +318,19 @@ const fetchPortfolioValues = async (portfolioId) => {
   }
 };
 
+const fetchPortfolioStocks = async (portfolioId) => {
+  const sql = 'SELECT * FROM PortfolioStock WHERE portfolio_id = ?'
+  const values = [portfolioId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results;
+  } catch (error) {
+    throw error;
+  }
+};
+
 const updatePortfolioValues = async (portfolioId, assetValue, cashValue, portfolioValue) => {
   const sql = 'UPDATE Portfolios SET asset_value = ?, cash_value = ?, portfolio_value = ? WHERE portfolio_id = ?'
   const values = [assetValue, cashValue, portfolioValue, portfolioId];
@@ -690,9 +703,11 @@ app.get('/portfolio/:portfolioId', async (req, res) => {
   try {
     const portfolioId = req.params.portfolioId;
     const portfolioValues = await fetchPortfolioValues(portfolioId);
-    const stocks = await fetchStocksInPortfolio(portfolioId)
+    const stocks = await fetchPortfolioStocks(portfolioId);
 
     const data = { portfolioValues, stocks };
+    console.log(data);
+  
 
     if (portfolioId) {
       res.json(data);
@@ -728,8 +743,8 @@ const main = async () => {
       
   task.start();
 
-  console.log(await(fetchUserInfo(2)));
-  console.log(await(fetchPastGames(2)));
+  // console.log(await(fetchUserInfo(2)));
+  // console.log(await(fetchPastGames(2)));
 
   
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
@@ -746,7 +761,8 @@ const main = async () => {
   // console.log(await(fetchLastSave(4)));
   // console.log(await(validateSave(4)));
 
-  // console.log(await(fetchPortfolioValues(4)));
+  console.log(await(fetchPortfolioValues(7)));
+  console.log(await(fetchPortfolioStocks(7)));
 
   // console.log(await(fetchPastPortfolios(1)));
   // console.log(await(fetchGameInfoForPortfolio(1)));
@@ -758,7 +774,7 @@ const main = async () => {
     115: 200
   };
   //console.log(await(processActions(7, actions)));
-  console.log(await(fetchCurrentGameUsers(2)));
+  // console.log(await(fetchCurrentGameUsers(2)));
 
   //const portfolioId = 5; // Replace with the actual portfolio ID
   /*
