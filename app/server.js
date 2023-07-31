@@ -729,31 +729,22 @@ app.get('/homepage/:userId', async (req, res) => {
   }
 });
 
-
-
 // Route for getting portfolio info
-app.get('/portfolio', async (req, res) => {
-  const userId = req.params.userId;
-
-  // Check if user ID is missing/invalid
-  if (!userId) {
-    return res.status(400).json({ error: 'Missing user token' });
-  }
-
+app.get('/portfolio/:portfolioId', async (req, res) => {
   try {
-    const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
-    const stocks = await fetchStocksInPortfolio(portfolioId);
+    const portfolioId = req.params.portfolioId;
+    const portfolioValues = await fetchPortfolioValues(portfolioId);
+    const stocks = await fetchStocksInPortfolio(portfolioId)
 
-    // Prepare response
-    const portfolioInfo = {
-      portfolio_id: portfolioId,
-      cash_value: cash_value,
-      portfolio_value: portfolio_value
-    };
+    const data = { portfolioValues, stocks };
 
-    res.json(portfolioInfo);
+    if (portfolioId) {
+      res.json(data);
+    } else {
+      res.send({ message: "Portfolio does not exist" });
+    }
   } catch (error) {
-    console.log('Error fetching portfolio information');
+    res.send({ err: error.message });
   }
 });
 
