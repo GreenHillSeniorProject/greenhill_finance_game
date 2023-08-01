@@ -537,11 +537,6 @@ const createInviteEmail = async (first_name, last_name, email, user_id) => {
   res.send(mailtoLink);
 };
 
-
-const createUserToken = async (payload) => {
-  return jwt.sign(payload, SECRET_KEY, )
-}
-
 // Route for handling user sign up requests
 app.post("/signup", async (req, res) => {
   const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
@@ -590,6 +585,11 @@ app.post("/signup", async (req, res) => {
 // Route for handling user sign in requests
 app.post("/signin", (req, res) => {
   let { email, password } = req.body;
+
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    res.status(400).send({ message: "Invalid email or password format" });
+    return;
+  }
 
   db.query('SELECT * FROM Users WHERE email = ?', [email], (err, result) => {
     if (err) {
