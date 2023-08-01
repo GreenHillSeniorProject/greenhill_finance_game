@@ -537,50 +537,50 @@ const createInviteEmail = async (first_name, last_name, email, user_id) => {
   res.send(mailtoLink);
 };
 
-// Route for handling user sign up requests
 app.post("/signup", async (req, res) => {
   const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
 
-  // Generate a new referral code
-  const referral_code = generateReferralCode();
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    res.status(400).send({ error: 'Invalid email or password format' });
+    return;
+  }
 
   try {
-    // Validate the invitation code
-    const referralQuery = 'SELECT referrer_id FROM Referrals WHERE referral_code = ?';
-    const referralQueryAsync = util.promisify(db.query).bind(db);
-    const referralResult = await referralQueryAsync(referralQuery, [invitation_code]);
-
+    const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
     if (referralResult.length === 0) {
       res.send({ error: 'Invalid invitation code' });
       return;
     }
-
     const referrer_id = referralResult[0].referrer_id;
+
     const hashedPassword = bcrypt.hashSync(password, 10);
 
-    // Insert the user into the database
-    const userQuery = 'INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)';
-    const userQueryAsync = util.promisify(db.query).bind(db);
-    await userQueryAsync(userQuery, [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+    const insertResult = await runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+    [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+    const user_id = insertResult.insertId;
 
-    // // Insert the referral information
-    // const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-    // const expiration_date = new Date();
-    // expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-    // const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-    // await referralInsertQueryAsync(referralInsertQuery, [referrer_id, email, referral_code, 'pending', expiration_date]);
+    await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
 
-    // Update the referral information
-    const referralUpdateQuery = 'UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?';
-    const referralUpdateQueryAsync = util.promisify(db.query).bind(db);
-    await referralUpdateQueryAsync(referralUpdateQuery, [invitation_code]);
+    const token = jwt.sign({ id: user_id }, SECRET_KEY);
 
-    res.send({ message: 'Account created successfully' });
+    res.send({ message: 'Account created successfully', token: token });
   } catch (error) {
     console.error('Error creating account:', error);
     res.status(500).send({ error: 'An error occurred while creating the account' });
   }
 });
+
+function runQuery(query, params) {
+  return new Promise((resolve, reject) => {
+    db.query(query, params, (error, result) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+}
 
 // Route for handling user sign in requests
 app.post("/signin", (req, res) => {
@@ -820,7 +820,7 @@ async function validatePassword(password, hashedPassword) {
 */
 
 app.listen(3001, () => {
-   console.log("local host server running")
+   console.log("Server running at http://localhost:3001")
 });
 
 main();
