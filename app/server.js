@@ -605,7 +605,7 @@ app.post("/signin", (req, res) => {
             if (err) {
               res.send({ err: err });
             } else {
-              res.send({ token: token, user: result[0] });
+              res.send({ token: token });
             }
           });
         } else {
