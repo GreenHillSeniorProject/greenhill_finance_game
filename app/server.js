@@ -11,19 +11,9 @@ const util = require('util');
 const config = require('../config.json');
 const referralCodeGenerator = require('referral-code-generator');
 const cron = require('node-cron');
-let jwt = require('jsonwebtoken')
+let jwt = require('jsonwebtoken');
 
 const SECRET_KEY = config.secret_key;
-
-// Schedule task to run at 5 PM every day
-cron.schedule('0 17 * * *', async () => {
-  try {
-    await updatePortfolioDayValue();
-    console.log('End of day portfolio value updated successfully.');
-  } catch (error) {
-    console.error('Error updating end of day portfolio value:', error);
-  }
-});
 
 // Create Express app and set up middleware
 const app = express();
@@ -34,9 +24,19 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.localhost_password,
+  password: config.password,
   database: config.db_name,
   insecureAuth: true
+});
+
+// Schedule task to run at 5 PM every day
+cron.schedule('0 17 * * *', async () => {
+  try {
+    await updatePortfolioDayValue();
+    console.log('End of day portfolio value updated successfully.');
+  } catch (error) {
+    console.error('Error updating end of day portfolio value:', error);
+  }
 });
 
 app.get('/faq', (req, res) => {
@@ -589,23 +589,34 @@ app.post("/signup", async (req, res) => {
 
 // Route for handling user sign in requests
 app.post("/signin", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
+  let { email, password } = req.body;
 
-  db.query('SELECT * FROM Users WHERE email = ? AND password = ?',
-    [email, password],
-    (err, result) => {
-      if (err) {
-        res.send({ err: err });
-      }
-
-      if (result.length > 0) {
-        res.send(result);
-      } else {
-        res.send({ message: "Account does not exist" });
-      }
-    })
-})
+  db.query('SELECT * FROM Users WHERE email = ?', [email], (err, result) => {
+    if (err) {
+      res.send({ err: err });
+    }
+    if (result.length > 0) {
+      bcrypt.compare(password, result[0].password, (err, isMatch) => {
+        if (err) {
+          res.send({ err: err });
+        }
+        if (isMatch) {
+          jwt.sign({ id: result[0].user_id }, SECRET_KEY, (err, token) => {
+            if (err) {
+              res.send({ err: err });
+            } else {
+              res.send({ token: token, user: result[0] });
+            }
+          });
+        } else {
+          res.send({ message: "Email and password do not match." });
+        }
+      });
+    } else {
+      res.send({ message: "Account does not exist" });
+    }
+  });
+});
 
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
@@ -626,7 +637,6 @@ const main = async () => {
   const portfolioId = 5; // Replace with the actual portfolio ID
   const actions = [
     { type: 'buyShare', stockId: 112, quantity: 0 },
-
     { type: 'sellShare', stockId: 113, quantity: 0 }
   ];
 
