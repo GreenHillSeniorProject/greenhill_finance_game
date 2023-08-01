@@ -9,11 +9,18 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
-const referralCodeGenerator = require('referral-code-generator');
 const cron = require('node-cron');
-let jwt = require('jsonwebtoken');
+//const jwt = require("jwt-simple");
 
-const SECRET_KEY = config.secret_key;
+// Schedule task to run at 5 PM every day
+cron.schedule('0 17 * * *', async () => {
+  try {
+    await updatePortfolioDayValue();
+    console.log('End of day portfolio value updated successfully.');
+  } catch (error) {
+    console.error('Error updating end of day portfolio value:', error);
+  }
+});
 
 // Create Express app and set up middleware
 const app = express();
@@ -24,19 +31,9 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.password,
+  password: config.db_password,
   database: config.db_name,
   insecureAuth: true
-});
-
-// Schedule task to run at 5 PM every day
-cron.schedule('0 17 * * *', async () => {
-  try {
-    await updatePortfolioDayValue();
-    console.log('End of day portfolio value updated successfully.');
-  } catch (error) {
-    console.error('Error updating end of day portfolio value:', error);
-  }
 });
 
 app.get('/faq', (req, res) => {
@@ -54,7 +51,7 @@ app.get('/faq', (req, res) => {
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
   try {
-    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
+    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonApiKey}`);
     const data = response.data;
     return {
       symbol: symbol,
@@ -67,7 +64,7 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-const delay = 1000 * 12; // 12 seconds
+const delay = 5 * 60 * 1000; // 5 minutes
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
@@ -156,79 +153,51 @@ const validateSave = async (portfolioId) => {
   currDate.setHours(0,0,0,0);
   console.log(lastSave);
   console.log(currDate);
+
+  const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await(fetchGameInfoForPortfolio(portfolioId));
+
+
+  // check if portfolio has been saved today
   if (lastSave >= currDate()) {
     console.log("You have already made changes to your portfolio today. These changes will not be saved.")
   }
 
+
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
+  if (numStocks < min_stocks || numStocks > max_stocks) {
+    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`)
+  }
   
-  // check non negative cash balance
+  // check non-negative final cash balance (assuming a valid list of transactions is given)
+  const final_cash_balance = await(processActions(portfolioId, actions));
+  if (final_cash_balance < 0) {
+    console.log("Cannot have a negative cash balance.")
+  }
 }
-/*
-// Function to see portfolio value results after a list of transactions
+
+// Function to see portfolio value results after a list of transactions [id1: -2, id2: 2]
 const processActions = async (portfolioId, actions) => {
-  return new Promise(async (resolve, reject) => {
-    let transactionSuccessful = false;
+  try {
+    const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
+    let cashBalance = parseFloat(cash_value, 2);
+    console.log(actions);
+    console.log(`Cash balance: ${cashBalance}`);
 
-    try {
-      const portfolioValues = await fetchPortfolioValues(portfolioId);
-      let cashBalance = parseFloat(portfolioValues.cash_value, 2);
-      let assetValue = parseFloat(portfolioValues.asset_value, 2);
-      let portfolioValue = parseFloat(portfolioValues.portfolio_value, 2);
-
-      console.log(`Original cash balance: ${cashBalance}`);
-
-      // Create a savepoint to allow rolling back to the initial state
-      await createSavepoint();
-
-      for (const action of actions) {
-        console.log(action);
-        const { type, stockId, quantity, amount } = action;
-        const stockPrice = await fetchStockPrice(stockId);
-        let totalCost = stockPrice * quantity;
-
-        if (type === 'buyShare') {
-          if (portfolioValue >= totalCost) {
-            cashBalance -= totalCost;
-            assetValue += totalCost;
-            portfolioValue = cashBalance + assetValue;
-
-            await updateStockQuantity(portfolioId, stockId, quantity);
-            console.log(`Purchased ${quantity} shares of stock ${stockId} for ${totalCost}`);
-          } else {
-            console.log(`Skipping buyShare action for stock ${stockId} due to insufficient balance`);
-          }
-        } else if (type === 'sellShare') {
-          const currentStockQuantity = await fetchStockQuantity(portfolioId, stockId); // number of shares the portfolio currently has
-
-          if (currentStockQuantity >= quantity) {
-            cashBalance += totalCost;
-            assetValue -= totalCost;
-            portfolioValue = cashBalance + assetValue;
-
-            await updateStockQuantity(portfolioId, stockId, -quantity);
-            console.log(`Sold ${quantity} shares of stock ${stockId} for ${totalCost}`);
-          } else {
-            console.log(`Skipping sellShare action for stock ${stockId} due to insufficient stock quantity`);
-          }
-        } 
-      }
-
-      await updatePortfolioValues(portfolioId, assetValue, cashBalance, portfolioValue);
-      console.log("New cash balance: " + cashBalance);
-
-      if (cashBalance >= 0) {
-        resolve(cashBalance);
-      } else {
-        reject(new Error('Negative cash balance at the end of transactions'));
-      }
-    } catch (error) {
-      reject(error);
+    for (const stock_id in actions) {
+      const stockPrice = await fetchStockPrice(stock_id);
+      console.log(stockPrice);
+      console.log(actions[stock_id]);
+      cashBalance -= stockPrice * actions[stock_id], 2;
     }
-  });
+    cashBalance = cashBalance.toFixed(2);
+    console.log(cashBalance);
+
+    return cashBalance;
+  } catch (error) {
+    throw error;
+  }
 };
-*/
 
 // Function to get timestamp of last portfolio save
 const fetchLastSave = async (portfolioId) => {
@@ -251,9 +220,9 @@ const buyStockByShare = async (portfolioId, stockId, quantity) => {
   // Fetch portfolio values
   try {
     const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
-    const cashBalance = parseFloat(cash_value, 2);
-    const assetValue = parseFloat(asset_value, 2);
-    const portfolioValue = parseFloat(portfolio_value, 2);
+    const cashBalance = parseFloat(cash_value,2);
+    const assetValue = parseFloat(asset_value,2);
+    const portfolioValue = parseFloat(portfolio_value,2);
 
     console.log(`Original cash balance: ${cashBalance}`);
 
@@ -349,6 +318,19 @@ const fetchPortfolioValues = async (portfolioId) => {
   }
 };
 
+const fetchPortfolioStocks = async (portfolioId) => {
+  const sql = 'SELECT * FROM PortfolioStock p JOIN Stocks s on s.stock_id = p.stock_id WHERE portfolio_id = ?'
+  const values = [portfolioId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results;
+  } catch (error) {
+    throw error;
+  }
+};
+
 const updatePortfolioValues = async (portfolioId, assetValue, cashValue, portfolioValue) => {
   const sql = 'UPDATE Portfolios SET asset_value = ?, cash_value = ?, portfolio_value = ? WHERE portfolio_id = ?'
   const values = [assetValue, cashValue, portfolioValue, portfolioId];
@@ -395,7 +377,7 @@ const fetchStockQuantity = (portfolioId, stockId) => {
   });
 };
 
-// Function to fetch number of unique stocks in porfolio
+// Function to fetch number of unique stocks in portfolio
 const fetchStockCount = (portfolioId) => {
   const sql = 'SELECT COUNT(*) as count FROM portfolioStock WHERE portfolio_id = ?';
   const values = [portfolioId];
@@ -479,6 +461,140 @@ const updatePortfolioDayValue = async (portfolioId) => {
   });
 }
 
+// Function to fetch user's past portfolios in order of most recent game end date
+const fetchPastPortfolios = (userId) => {
+  const sql = 'SELECT * FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? ORDER BY g.end_date DESC;';
+  const values = [userId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+// Function to fetch user's past games in order of most recent game end date
+const fetchPastGames = (userId) => {
+  const sql = 'SELECT g.game_name, g.sponsor, g.type FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? and p.game_id != (SELECT current_game from users where user_id = ?) ORDER BY g.end_date DESC;';
+  const values = [userId, userId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+}
+
+const fetchGameInfoForPortfolio = (portfolioId) => {
+  const sql = 'SELECT * FROM gameInfo g JOIN portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
+  const values = [portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+
+// Function to fetch all portfolios in a game in order of highest portfolio value
+const fetchGamePortfolios = (gameId) => {
+  const sql = 'SELECT * FROM portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
+  const values = [gameId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+// Function to fetch current game
+const fetchCurrentGame = async (userId) => {
+  const sql = 'SELECT current_game from users WHERE user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0].current_game;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+// Function to fetch current game users in order of highest portfolio value
+const fetchCurrentGameUsers = async (userId) => {
+  try {
+    const currGame = await(fetchCurrentGame(userId));
+    const currGameUsers = await(fetchGameUsers(currGame));
+    return currGameUsers;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Function to fetch all users in a game in order of highest portfolio value
+const fetchGameUsers = (gameId) => {
+  const sql = 'SELECT u.username, p.portfolio_value, g.game_id FROM users u JOIN portfolios p ON u.user_id = p.user_id JOIN gameinfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
+  const values = [gameId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      }
+    });
+  });
+};
+
+const fetchUserInfo = async (userId) => {
+  const sql = 'SELECT first_name, last_name, username FROM users WHERE user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Function to generate a new referral code
 function generateReferralCode() {
   // Generate a unique referral code according to your requirements
@@ -495,47 +611,6 @@ function generateReferralCode() {
   return referralCode;
 }
 
-
-const generateReferalCode = async () => {
-  return referralCodeGenerator.alpha('uppercase', 4);
-}
-
-//params required: 
-app.get("/invite-email-mailto", (req, res) =>{
-  const {first_name, last_name, email} = req.body;
-  res.send(createInviteEmail(first_name, last_name, email));
-});
-
-//shouldn't need the user_id once tokens become available
-const createInviteEmail = async (first_name, last_name, email, user_id) => {
-
-  let code = await generateReferalCode();
-
-  var subject = "Invitation to Field Goal Finance";
-  var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
-  invited to a unique and exclusive gaming community!\
-  \
-  Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \
-  Your invitation code is " + code + ".\
-  \
-  As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
-  plus a chance to win a prize!\
-  \
-  Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\
-  \
-  Thank you for playing!";
-  var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-
-  //insert the invite to the Referrals table in the database
-  //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
-  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-  const expiration_date = new Date();
-  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
-
-  res.send(mailtoLink);
-};
 
 app.post("/signup", async (req, res) => {
   const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
@@ -618,12 +693,83 @@ app.post("/signin", (req, res) => {
   });
 });
 
+
+// Route for getting user's homepage
+app.get('/homepage/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const user = await fetchUserInfo(userId);
+    const currGameUsers = await fetchCurrentGameUsers(userId);
+    const pastGames = await fetchPastGames(userId);
+
+    const data = { user, currGameUsers, pastGames};
+
+    if (user) {
+      res.json(data);
+      console.log("sending homepage data");
+    } else {
+      res.send({ message: "Account does not exist" });
+    }
+  } catch (error) {
+    res.send({ err: error.message });
+  }
+});
+
+// Route for getting portfolio info
+app.get('/portfolio/:portfolioId', async (req, res) => {
+  try {
+    const portfolioId = req.params.portfolioId;
+    const portfolioValues = await fetchPortfolioValues(portfolioId);
+    const stocks = await fetchPortfolioStocks(portfolioId);
+
+    const data = { portfolioValues, stocks };
+    console.log(data);
+  
+
+    if (portfolioId) {
+      res.json(data);
+    } else {
+      res.send({ message: "Portfolio does not exist" });
+    }
+  } catch (error) {
+    res.send({ err: error.message });
+  }
+});
+
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
+
+  // Schedule task to record end of day portfolio values
+  var task = cron.schedule('0 17 * * *', async () => {
+    const sql = `UPDATE portfolios SET yesterday_value = portfolio_value`;
+    try {
+      const results = await new Promise((resolve, reject) => {
+        db.query(sql, (error, results, fields) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(results);
+          }
+        });
+      });
+      console.log(results);
+    } catch (error) {
+      console.error(error);
+    }
+  });
+      
+  task.start();
+
+  // console.log(await(fetchUserInfo(2)));
+  // console.log(await(fetchPastGames(2)));
+
+  
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
 
   // Buy/sell test functions
-  // await(buyStockByShare(4, 112, 1));
+  // await(buyStockByShare(7, 112, 2));
+  //await(buyStockByShare(7, 113, 2));
+  // await(buyStockByShare(7, 115, 2));
   // await(sellStockByShare(4, 112, 1));
   // await(buyStockByCashAmount(4, 112, 300));
   // await(sellStockByCashAmount(4, 112, 203));
@@ -632,13 +778,29 @@ const main = async () => {
   // console.log(await(fetchLastSave(4)));
   // console.log(await(validateSave(4)));
 
-  // console.log(await(fetchPortfolioValues(4)));
+  console.log(await(fetchPortfolioValues(7)));
+  console.log(await(fetchPortfolioStocks(7)));
 
-  const portfolioId = 5; // Replace with the actual portfolio ID
+  // console.log(await(fetchPastPortfolios(1)));
+  // console.log(await(fetchGameInfoForPortfolio(1)));
+  // console.log(await(fetchGamePortfolios(1)));
+  // console.log(await(fetchGameUsers(1)));
+  const actions = {
+    112: -6,
+    113: -4,
+    115: 200
+  };
+  //console.log(await(processActions(7, actions)));
+  // console.log(await(fetchCurrentGameUsers(2)));
+
+  //const portfolioId = 5; // Replace with the actual portfolio ID
+  /*
   const actions = [
     { type: 'buyShare', stockId: 112, quantity: 0 },
+
     { type: 'sellShare', stockId: 113, quantity: 0 }
   ];
+  */
 
   /*
   console.log(await(processActions(portfolioId, actions)
@@ -675,10 +837,10 @@ const main = async () => {
 
         if (stockInDB !== null && stockInDB.length > 0) {
           const stockId = stockInDB[0].stock_id;
-          const date = '2023-07-18'; // specify the date for which you want to fetch the market data
+          const date = '2023-06-30'; // specify the date for which you want to fetch the market data
   
           try {
-            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonApiKey}`);
             const data = response.data;
             const { high, low, open, close } = data;
   
@@ -703,7 +865,6 @@ const main = async () => {
         await sleep(delay);
       }
     });
-    
 };
 
 /*
@@ -820,7 +981,7 @@ async function validatePassword(password, hashedPassword) {
 */
 
 app.listen(3001, () => {
-   console.log("Server running at http://localhost:3001")
+  console.log("local host server running")
 });
 
 main();

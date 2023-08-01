@@ -1,7 +1,6 @@
 {
   "name": "app",
   "version": "1.0.0",
-  "description": "",
   "main": "server.js",
   "dependencies": {
     "abbrev": "^1.1.1",
@@ -146,5 +145,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {},
+  "description": ""
 }
