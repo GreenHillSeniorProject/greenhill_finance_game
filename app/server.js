@@ -319,7 +319,7 @@ const fetchPortfolioValues = async (portfolioId) => {
 };
 
 const fetchPortfolioStocks = async (portfolioId) => {
-  const sql = 'SELECT * FROM PortfolioStock WHERE portfolio_id = ?'
+  const sql = 'SELECT * FROM PortfolioStock p JOIN Stocks s on s.stock_id = p.stock_id WHERE portfolio_id = ?'
   const values = [portfolioId];
   const query = util.promisify(db.query).bind(db);
 
@@ -690,6 +690,7 @@ app.get('/homepage/:userId', async (req, res) => {
 
     if (user) {
       res.json(data);
+      console.log("sending homepage data");
     } else {
       res.send({ message: "Account does not exist" });
     }
