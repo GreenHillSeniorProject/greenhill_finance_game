@@ -10,7 +10,7 @@ const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
 const cron = require('node-cron');
-//const jwt = require("jwt-simple");
+const jwt = require("jsonwebtoken");
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
