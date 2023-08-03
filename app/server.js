@@ -11,6 +11,7 @@ const util = require('util');
 const config = require('../config.json');
 const cron = require('node-cron');
 const jwt = require("jsonwebtoken");
+const SECRET_KEY = 'G1R2E3E4N5H6I7L8L9';
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -901,7 +902,6 @@ Thank you for playing!";
   const expiration_date = new Date();
   expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
   const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-  console.log(mailtoLink);
   await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
 
 
