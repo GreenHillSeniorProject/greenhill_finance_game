@@ -10,8 +10,7 @@ const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
 const cron = require('node-cron');
-const jwt = require("jsonwebtoken");
-const SECRET_KEY = 'G1R2E3E4N5H6I7L8L9';
+//const jwt = require("jwt-simple");
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -32,7 +31,7 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.db_password,
+  password: config.localhost_password,
   database: config.db_name,
   insecureAuth: true
 });
@@ -52,7 +51,7 @@ app.get('/faq', (req, res) => {
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
   try {
-    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonApiKey}`);
+    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
     const data = response.data;
     return {
       symbol: symbol,
@@ -65,7 +64,7 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-const delay = 5 * 60 * 1000; // 5 minutes
+const delay = 1000 * 12; // 12 seconds
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
@@ -154,15 +153,9 @@ const validateSave = async (portfolioId) => {
   currDate.setHours(0,0,0,0);
   console.log(lastSave);
   console.log(currDate);
-
-  const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await(fetchGameInfoForPortfolio(portfolioId));
-
-
-  // check if portfolio has been saved today
   if (lastSave >= currDate()) {
     console.log("You have already made changes to your portfolio today. These changes will not be saved.")
   }
-
 
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
@@ -662,80 +655,20 @@ function runQuery(query, params) {
 app.post("/signin", (req, res) => {
   let { email, password } = req.body;
 
-  if (typeof email !== 'string' || typeof password !== 'string') {
-    res.status(400).send({ message: "Invalid email or password format" });
-    return;
-  }
+  db.query('SELECT * FROM Users WHERE email = ? AND password = ?',
+    [email, password],
+    (err, result) => {
+      if (err) {
+        res.send({ err: err });
+      }
 
-  db.query('SELECT * FROM Users WHERE email = ?', [email], (err, result) => {
-    if (err) {
-      res.send({ err: err });
-    }
-    if (result.length > 0) {
-      bcrypt.compare(password, result[0].password, (err, isMatch) => {
-        if (err) {
-          res.send({ err: err });
-        }
-        if (isMatch) {
-          jwt.sign({ id: result[0].user_id }, SECRET_KEY, (err, token) => {
-            if (err) {
-              res.send({ error: err });
-            } else {
-              res.send({ token: token });
-            }
-          });
-        } else {
-          res.send({ error: "Email and password do not match." });
-        }
-      });
-    } else {
-      res.send({ error: "Account does not exist" });
-    }
-  });
-});
-
-
-// Route for getting user's homepage
-app.get('/homepage/:userId', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const user = await fetchUserInfo(userId);
-    const currGameUsers = await fetchCurrentGameUsers(userId);
-    const pastGames = await fetchPastGames(userId);
-
-    const data = { user, currGameUsers, pastGames};
-
-    if (user) {
-      res.json(data);
-      console.log("sending homepage data");
-    } else {
-      res.send({ message: "Account does not exist" });
-    }
-  } catch (error) {
-    res.send({ err: error.message });
-  }
-});
-
-// Route for getting portfolio info
-app.get('/portfolio/:portfolioId', async (req, res) => {
-  try {
-    const portfolioId = req.params.portfolioId;
-    const portfolioValues = await fetchPortfolioValues(portfolioId);
-    const stocks = await fetchPortfolioStocks(portfolioId);
-
-    const data = { portfolioValues, stocks };
-    console.log(data);
-  
-
-    if (portfolioId) {
-      res.json(data);
-    } else {
-      res.send({ message: "Portfolio does not exist" });
-    }
-  } catch (error) {
-    res.send({ err: error.message });
-  }
-});
+      if (result.length > 0) {
+        res.send(result);
+      } else {
+        res.send({ message: "Account does not exist" });
+      }
+    })
+})
 
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
@@ -866,46 +799,7 @@ const main = async () => {
         await sleep(delay);
       }
     });
-};
-
-//params required: 
-app.post("/invite-mailto", async (req, res) => {
-  const {first_name, last_name, email} = req.body;
-  //1 is a dummy id for now, shouldn't affect integration testing
-  let mailto = await createInviteEmail(first_name, last_name, email, 1);
-  res.send(mailto);
-});
-
-//shouldn't need the user_id once tokens become available
-const createInviteEmail = async (first_name, last_name, email, user_id) => {
-
-  let code = generateReferralCode();
-
-  var subject = "Invitation to Field Goal Finance";
-  var body = "Hello " + first_name + " " + last_name + "!\n\nDo you have what it takes to outperform your peers? You have been cordially \
-invited to a unique and exclusive gaming community!\n\n\
-\
-Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \
-Your invitation code is " + code + ".\n\n\
-\
-As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
-plus a chance to win a prize!\n\n\
-\
-Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\n\n\
-\
-Thank you for playing!";
-  var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-
-  //insert the invite to the Referrals table in the database
-  //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
-  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-  const expiration_date = new Date();
-  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
-
-
-  return mailtoLink;
+    
 };
 
 /*
