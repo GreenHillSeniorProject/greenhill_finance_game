@@ -9,7 +9,6 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
-const referralCodeGenerator = require('referral-code-generator');
 const cron = require('node-cron');
 //const jwt = require("jwt-simple");
 
@@ -32,7 +31,7 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.localhost_password,
+  password: config.db_password,
   database: config.db_name,
   insecureAuth: true
 });
@@ -52,7 +51,7 @@ app.get('/faq', (req, res) => {
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
   try {
-    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
+    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonApiKey}`);
     const data = response.data;
     return {
       symbol: symbol,
@@ -65,7 +64,7 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-const delay = 1000 * 12; // 12 seconds
+const delay = 5 * 60 * 1000; // 5 minutes
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
@@ -314,6 +313,19 @@ const fetchPortfolioValues = async (portfolioId) => {
   try {
     const results = await query(sql, values);
     return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
+const fetchPortfolioStocks = async (portfolioId) => {
+  const sql = 'SELECT * FROM PortfolioStock p JOIN Stocks s on s.stock_id = p.stock_id WHERE portfolio_id = ?'
+  const values = [portfolioId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results;
   } catch (error) {
     throw error;
   }
@@ -600,113 +612,86 @@ function generateReferralCode() {
 }
 
 
-const generateReferalCode = async () => {
-  return referralCodeGenerator.alpha('uppercase', 4);
-}
-
-//params required: 
-app.get("/invite-email-mailto", (req, res) =>{
-  const {first_name, last_name, email} = req.body;
-  res.send(createInviteEmail(first_name, last_name, email));
-});
-
-//shouldn't need the user_id once tokens become available
-const createInviteEmail = async (first_name, last_name, email, user_id) => {
-
-  let code = await generateReferalCode();
-
-  var subject = "Invitation to Field Goal Finance";
-  var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
-  invited to a unique and exclusive gaming community!\
-  \
-  Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \
-  Your invitation code is " + code + ".\
-  \
-  As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
-  plus a chance to win a prize!\
-  \
-  Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\
-  \
-  Thank you for playing!";
-  var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-
-  //insert the invite to the Referrals table in the database
-  //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
-  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-  const expiration_date = new Date();
-  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
-
-  res.send(mailtoLink);
-};
-
-
-
-// Route for handling user sign up requests
 app.post("/signup", async (req, res) => {
   const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
 
-  // Generate a new referral code
-  const referral_code = generateReferralCode();
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    res.status(400).send({ error: 'Invalid email or password format' });
+    return;
+  }
 
   try {
-    // Validate the invitation code
-    const referralQuery = 'SELECT referrer_id FROM Referrals WHERE referral_code = ?';
-    const referralQueryAsync = util.promisify(db.query).bind(db);
-    const referralResult = await referralQueryAsync(referralQuery, [invitation_code]);
-
+    const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
     if (referralResult.length === 0) {
       res.send({ error: 'Invalid invitation code' });
       return;
     }
-
     const referrer_id = referralResult[0].referrer_id;
-    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert the user into the database
-    const userQuery = 'INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)';
-    const userQueryAsync = util.promisify(db.query).bind(db);
-    await userQueryAsync(userQuery, [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+    const hashedPassword = bcrypt.hashSync(password, 10);
 
-    // // Insert the referral information
-    // const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-    // const expiration_date = new Date();
-    // expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-    // const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-    // await referralInsertQueryAsync(referralInsertQuery, [referrer_id, email, referral_code, 'pending', expiration_date]);
+    const insertResult = await runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+    [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+    const user_id = insertResult.insertId;
 
-    // Update the referral information
-    const referralUpdateQuery = 'UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?';
-    const referralUpdateQueryAsync = util.promisify(db.query).bind(db);
-    await referralUpdateQueryAsync(referralUpdateQuery, [invitation_code]);
+    await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
 
-    res.send({ message: 'Account created successfully' });
+    const token = jwt.sign({ id: user_id }, SECRET_KEY);
+
+    res.send({ message: 'Account created successfully', token: token });
   } catch (error) {
     console.error('Error creating account:', error);
     res.status(500).send({ error: 'An error occurred while creating the account' });
   }
 });
 
+function runQuery(query, params) {
+  return new Promise((resolve, reject) => {
+    db.query(query, params, (error, result) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+}
+
 // Route for handling user sign in requests
 app.post("/signin", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
+  let { email, password } = req.body;
 
-  db.query('SELECT * FROM Users WHERE email = ? AND password = ?',
-    [email, password],
-    (err, result) => {
-      if (err) {
-        res.send({ err: err });
-      }
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    res.status(400).send({ message: "Invalid email or password format" });
+    return;
+  }
 
-      if (result.length > 0) {
-        res.send(result);
-      } else {
-        res.send({ message: "Account does not exist" });
-      }
-    })
-})
+  db.query('SELECT * FROM Users WHERE email = ?', [email], (err, result) => {
+    if (err) {
+      res.send({ err: err });
+    }
+    if (result.length > 0) {
+      bcrypt.compare(password, result[0].password, (err, isMatch) => {
+        if (err) {
+          res.send({ err: err });
+        }
+        if (isMatch) {
+          jwt.sign({ id: result[0].user_id }, SECRET_KEY, (err, token) => {
+            if (err) {
+              res.send({ err: err });
+            } else {
+              res.send({ token: token });
+            }
+          });
+        } else {
+          res.send({ message: "Email and password do not match." });
+        }
+      });
+    } else {
+      res.send({ message: "Account does not exist" });
+    }
+  });
+});
 
 
 // Route for getting user's homepage
@@ -721,6 +706,7 @@ app.get('/homepage/:userId', async (req, res) => {
 
     if (user) {
       res.json(data);
+      console.log("sending homepage data");
     } else {
       res.send({ message: "Account does not exist" });
     }
@@ -734,9 +720,11 @@ app.get('/portfolio/:portfolioId', async (req, res) => {
   try {
     const portfolioId = req.params.portfolioId;
     const portfolioValues = await fetchPortfolioValues(portfolioId);
-    const stocks = await fetchStocksInPortfolio(portfolioId)
+    const stocks = await fetchPortfolioStocks(portfolioId);
 
     const data = { portfolioValues, stocks };
+    console.log(data);
+  
 
     if (portfolioId) {
       res.json(data);
@@ -772,8 +760,8 @@ const main = async () => {
       
   task.start();
 
-  console.log(await(fetchUserInfo(2)));
-  console.log(await(fetchPastGames(2)));
+  // console.log(await(fetchUserInfo(2)));
+  // console.log(await(fetchPastGames(2)));
 
   
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
@@ -790,7 +778,8 @@ const main = async () => {
   // console.log(await(fetchLastSave(4)));
   // console.log(await(validateSave(4)));
 
-  // console.log(await(fetchPortfolioValues(4)));
+  console.log(await(fetchPortfolioValues(7)));
+  console.log(await(fetchPortfolioStocks(7)));
 
   // console.log(await(fetchPastPortfolios(1)));
   // console.log(await(fetchGameInfoForPortfolio(1)));
@@ -802,7 +791,7 @@ const main = async () => {
     115: 200
   };
   //console.log(await(processActions(7, actions)));
-  console.log(await(fetchCurrentGameUsers(2)));
+  // console.log(await(fetchCurrentGameUsers(2)));
 
   //const portfolioId = 5; // Replace with the actual portfolio ID
   /*
@@ -848,10 +837,10 @@ const main = async () => {
 
         if (stockInDB !== null && stockInDB.length > 0) {
           const stockId = stockInDB[0].stock_id;
-          const date = '2023-07-18'; // specify the date for which you want to fetch the market data
+          const date = '2023-06-30'; // specify the date for which you want to fetch the market data
   
           try {
-            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonApiKey}`);
             const data = response.data;
             const { high, low, open, close } = data;
   
@@ -992,7 +981,7 @@ async function validatePassword(password, hashedPassword) {
 */
 
 app.listen(3001, () => {
-   console.log("local host server running")
+  console.log("local host server running")
 });
 
 main();
