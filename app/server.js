@@ -794,7 +794,7 @@ app.post("/signin", (req, res) => {
 });
 
 //Route for updating advisor profile
-app.post('/editprofile/:userId', async (req, res) => {
+/*app.post('/editprofile/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     const user = await await fetchUserInfo(userId);
@@ -815,7 +815,7 @@ app.post('/editprofile/:userId', async (req, res) => {
   } catch (error) {
     res.send({ err: error.message });
   }
-});
+});*/
 
 
 // Route for getting user's homepage
@@ -825,6 +825,8 @@ app.get('/homepage/:userId', async (req, res) => {
     const user = await fetchUserInfo(userId);
     const currGameUsers = await fetchCurrentGameUsers(userId);
     const pastGames = await fetchPastGames(userId);
+    const dayDelta = await fetchDayDelta(userId);
+    const weekDelta = await fetchWeekDelta (userId);
     const avgRank = await fetchAveRanking(userId);
     const no1stRank = await fetchNumber1stRankedGames(userId);
     const no2ndRank = await fetchNumber2ndRankedGames(userId);
