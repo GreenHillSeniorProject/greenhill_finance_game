@@ -8,14 +8,14 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 
 -- -----------------------------------------------------
--- Schema greenhill_localhost
+-- Schema mydb
 -- -----------------------------------------------------
 
-CREATE SCHEMA IF NOT EXISTS `greenhill_localhost` DEFAULT CHARACTER SET utf8 ;
-USE `greenhill_localhost` ;
+CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 ;
+USE `mydb` ;
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`Users`
+-- Table `mydb`.`Users`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `Users` (
   `user_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `Users` (
   `is_financial_advisor` TINYINT(1) NOT NULL DEFAULT 0,
   `picture` BLOB NULL,
   `active` TINYINT(1) NULL,
+  `current_game` int DEFAULT NULL,
   `last_update` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   `date_created` DATE NOT NULL DEFAULT (CURRENT_DATE),
   PRIMARY KEY (`user_id`),
@@ -38,7 +39,7 @@ CREATE TABLE IF NOT EXISTS `Users` (
 ENGINE = InnoDB;
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`Referrals`
+-- Table `mydb`.`Referrals`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `Referrals` (
   `referral_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -53,13 +54,13 @@ CREATE TABLE IF NOT EXISTS `Referrals` (
   UNIQUE INDEX `referral_code_UNIQUE` (`referral_code` ASC) VISIBLE,
   CONSTRAINT `referrer_id_referrals`
     FOREIGN KEY (`referrer_id`)
-    REFERENCES `greenhill_localhost`.`Users` (`user_id`)
+    REFERENCES `mydb`.`Users` (`user_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`Stocks`
+-- Table `mydb`.`Stocks`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `Stocks` (
   `stock_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -75,69 +76,82 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`GameInfo`
+-- Table `mydb`.`GameInfo`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `GameInfo` (
   `game_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `game_name` VARCHAR(100) NOT NULL,
+  `sponsor` VARCHAR(100) NOT NULL,
+  `type` varchar(45) DEFAULT 'S&P Market Buster',
   `user_id` INT UNSIGNED NULL,
   `starting_cash` DECIMAL(5,2) NULL,
   `start_date` DATETIME NOT NULL,
   `end_date` DATETIME NOT NULL,
+  `min_stocks` int NOT NULL DEFAULT '0',
+  `max_stocks` int NOT NULL DEFAULT '503',
   `last_update` TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`game_id`),
   UNIQUE INDEX `game_id_UNIQUE` (`game_id` ASC) VISIBLE,
   CONSTRAINT `user_id_gameinfo`
     FOREIGN KEY (`user_id`)
-    REFERENCES `greenhill_localhost`.`Users` (`user_id`)
+    REFERENCES `mydb`.`Users` (`user_id`)
     ON DELETE SET NULL
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`Portfolios`
+-- Table `mydb`.`Portfolios`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `Portfolios` (
   `portfolio_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `portfolio_name` VARCHAR(45) NOT NULL,
   `user_id` INT UNSIGNED NOT NULL,
   `game_id` INT UNSIGNED NOT NULL,
+  `asset_value` decimal(10,2) NOT NULL,
+  `cash_value` decimal(10,2) NOT NULL,
+  `portfolio_value` decimal(10,2) NOT NULL,
+  `last_save` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `yesterday_value` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `last_week_value` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `final_rank` int NOT NULL,
   PRIMARY KEY (`portfolio_id`),
   CONSTRAINT `user_id_portfolios`
     FOREIGN KEY (`user_id`)
-    REFERENCES `greenhill_localhost`.`Users` (`user_id`)
+    REFERENCES `mydb`.`Users` (`user_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE,
   CONSTRAINT `game_id_portfolios`
     FOREIGN KEY (`game_id`)
-    REFERENCES `greenhill_localhost`.`GameInfo` (`game_id`)
+    REFERENCES `mydb`.`GameInfo` (`game_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`PortfolioStock`
+-- Table `mydb`.`PortfolioStock`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `PortfolioStock` (
   `portfolio_id` INT UNSIGNED NOT NULL,
   `stock_id` INT UNSIGNED NOT NULL,
+  `shares` int NOT NULL,
   PRIMARY KEY (`portfolio_id`, `stock_id`),
   INDEX `stock_id_idx` (`stock_id` ASC) VISIBLE,
   CONSTRAINT `portfolio_id`
     FOREIGN KEY (`portfolio_id`)
-    REFERENCES `greenhill_localhost`.`Portfolios` (`portfolio_id`)
+    REFERENCES `mydb`.`Portfolios` (`portfolio_id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `stock_id_portfoliostock`
     FOREIGN KEY (`stock_id`)
-    REFERENCES `greenhill_localhost`.`Stocks` (`stock_id`)
+    REFERENCES `mydb`.`Stocks` (`stock_id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`StockHistory`
+-- Table `mydb`.`StockHistory`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `StockHistory` (
   `record_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -151,7 +165,7 @@ CREATE TABLE IF NOT EXISTS `StockHistory` (
   UNIQUE INDEX `stock_id_timestamp_UNIQUE` (`stock_id`, `timestamp`) VISIBLE,
   CONSTRAINT `stock_id_stockhistory`
     FOREIGN KEY (`stock_id`)
-    REFERENCES `greenhill_localhost`.`Stocks` (`stock_id`)
+    REFERENCES `mydb`.`Stocks` (`stock_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE
 )
@@ -159,7 +173,7 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `greenhill_localhost`.`FAQ`
+-- Table `mydb`.`FAQ`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `FAQ` (
   `faq_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
