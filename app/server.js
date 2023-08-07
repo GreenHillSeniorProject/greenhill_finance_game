@@ -639,7 +639,7 @@ app.post("/signup", async (req, res) => {
 
     const token = jwt.sign({ id: user_id }, SECRET_KEY);
 
-    res.send({ message: 'Account created successfully', token: token });
+    res.json({ message: 'Account created successfully', token: token });
   } catch (error) {
     console.error('Error creating account:', error);
     res.status(500).send({ error: 'An error occurred while creating the account' });
@@ -681,7 +681,7 @@ app.post("/signin", (req, res) => {
             if (err) {
               res.send({ error: err });
             } else {
-              res.send({ token: token });
+              res.json({ token: token });
             }
           });
         } else {
