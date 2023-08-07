@@ -334,11 +334,8 @@ const fetchPortfolioValues = async (portfolioId) => {
   const values = [portfolioId];
   const query = util.promisify(db.query).bind(db);
 
-  console.log("fetching portfolio values");
-
   try {
     const results = await query(sql, values);
-    console.log(results);
     return results[0];
   } catch (error) {
     throw error;
