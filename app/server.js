@@ -52,7 +52,7 @@ app.get('/faq', (req, res) => {
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
   try {
-    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonApiKey}`);
+    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
     const data = response.data;
     return {
       symbol: symbol,
@@ -677,13 +677,14 @@ app.post("/signin", (req, res) => {
           res.send({ err: err });
         }
         if (isMatch) {
-          jwt.sign({ id: result[0].user_id }, SECRET_KEY, (err, token) => {
-            if (err) {
-              res.send({ error: err });
-            } else {
-              res.send({ token: token });
-            }
-          });
+          // jwt.sign({ id: result[0].user_id }, SECRET_KEY, (err, token) => {
+          //   if (err) {
+          //     res.send({ error: err });
+          //   } else {
+          //     res.json({ token: result[0].user_id });
+          //   }
+          // });
+          res.send({token: result[0].user_id});
         } else {
           res.status(400).send({ message: "Invalid email or password" });
         }
@@ -841,7 +842,7 @@ const main = async () => {
           const date = '2023-06-30'; // specify the date for which you want to fetch the market data
   
           try {
-            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonApiKey}`);
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
             const data = response.data;
             const { high, low, open, close } = data;
   
