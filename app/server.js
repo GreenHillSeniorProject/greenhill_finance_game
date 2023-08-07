@@ -49,6 +49,19 @@ app.get('/faq', (req, res) => {
   });
 });
 
+/* app.post('/faq/add', (req, res) => {
+  try {
+  const question = req.body.question;
+  const answer = req.body.answer;
+  var sql = 'INSERT INTO faq (question, answer, date_created) VALUES (?,?,now())';
+  const values = [question, answer];
+  const sqlAsync = util.promisify(db.query).bind(db);
+  await sqlAsync(sql, [username,phone_number,hashedPassword,userId]);
+  } catch (error) {
+    res.send({ err: error.message });
+  }
+}); */
+
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
   try {
