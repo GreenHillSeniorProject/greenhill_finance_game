@@ -199,6 +199,29 @@ const processActions = async (portfolioId, actions) => {
   }
 };
 
+// Function to see portfolio value results after a list of transactions [ticker1: -2, ticker2: 2]
+const processActionsTicker = async (portfolioId, actions) => {
+  try {
+    const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
+    let cashBalance = parseFloat(cash_value, 2);
+    console.log(actions);
+    console.log(`Cash balance: ${cashBalance}`);
+
+    for (const ticker in actions) {
+      const stockPrice = await fetchStockPriceByTicker(ticker);
+      console.log(stockPrice);
+      console.log(actions[ticker]);
+      cashBalance -= stockPrice * actions[ticker], 2;
+    }
+    cashBalance = cashBalance.toFixed(2);
+    console.log(cashBalance);
+
+    return cashBalance;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Function to get timestamp of last portfolio save
 const fetchLastSave = async (portfolioId) => {
   const sql = 'SELECT last_save FROM Portfolios WHERE portfolio_id = ?';
@@ -344,10 +367,25 @@ const updatePortfolioValues = async (portfolioId, assetValue, cashValue, portfol
   }
 };
 
-// Function to fetch stock price (based on opening price)
+// Function to fetch stock price by Id (based on opening price)
 const fetchStockPrice = (stockId) => {
   const sql = 'SELECT open FROM StockHistory WHERE stock_id = ?';
   const values = [stockId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(parseFloat(results[0].open, 2));
+      }
+    });
+  });
+};
+
+// Function to fetch stock price by ticker(based on opening price)
+const fetchStockPriceByTicker = (ticker) => {
+  const sql = 'SELECT sh.open FROM StockHistory sh JOIN stocks s ON sh.stock_id = s.stock_id WHERE s.ticker = ?';
+  const values = [ticker];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
       if (error) {
@@ -790,7 +828,14 @@ const main = async () => {
     113: -4,
     115: 200
   };
+
+  const actionsTicker = {
+    "MMM": -6,
+    "AOS": -4,
+    "ABBV": 200
+  };
   //console.log(await(processActions(7, actions)));
+  //console.log(await(processActionsTicker(7, actionsTicker)));
   // console.log(await(fetchCurrentGameUsers(2)));
 
   //const portfolioId = 5; // Replace with the actual portfolio ID
@@ -814,6 +859,7 @@ const main = async () => {
     })));
     */
 
+  /*
   const symbols = [];
   fs.createReadStream('constituents.csv')
     .pipe(csv())
@@ -866,6 +912,7 @@ const main = async () => {
         await sleep(delay);
       }
     });
+    */
 };
 
 
