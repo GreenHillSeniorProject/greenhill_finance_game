@@ -10,6 +10,7 @@ const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
 const cron = require('node-cron');
+const jwt = require('jsonwebtoken');
 //const jwt = require("jwt-simple");
 
 // Schedule task to run at 5 PM every day
@@ -658,6 +659,9 @@ app.post("/signup", async (req, res) => {
     return;
   }
 
+  console.log(req.body);
+  console.log(invitation_code);
+
   try {
     const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
     if (referralResult.length === 0) {
@@ -714,7 +718,7 @@ app.post("/signin", (req, res) => {
           res.send({ err: err });
         }
         if (isMatch) {
-          jwt.sign({ id: result[0].user_id }, SECRET_KEY, (err, token) => {
+          jwt.sign({ id: result[0].user_id }, config.SECRET_KEY, (err, token) => {
             if (err) {
               res.send({ err: err });
             } else {
@@ -798,6 +802,9 @@ const main = async () => {
       
   task.start();
 
+  const hashedPassword = bcrypt.hashSync('Pass123', 10);
+  console.log(hashedPassword);
+
   // console.log(await(fetchUserInfo(2)));
   // console.log(await(fetchPastGames(2)));
 
@@ -859,6 +866,7 @@ const main = async () => {
     })));
     */
 
+  
   /*
   const symbols = [];
   fs.createReadStream('constituents.csv')
@@ -885,6 +893,7 @@ const main = async () => {
           const stockId = stockInDB[0].stock_id;
           const currentDate = new Date();
           const formattedDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+          //const formattedDate = "2023-08-04";
   
           try {
             const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${formattedDate}?apiKey=${config.polygonPrice}`);
