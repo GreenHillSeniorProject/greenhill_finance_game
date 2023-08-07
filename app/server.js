@@ -334,8 +334,11 @@ const fetchPortfolioValues = async (portfolioId) => {
   const values = [portfolioId];
   const query = util.promisify(db.query).bind(db);
 
+  console.log("fetching portfolio values");
+
   try {
     const results = await query(sql, values);
+    console.log(results);
     return results[0];
   } catch (error) {
     throw error;
@@ -591,6 +594,23 @@ const fetchCurrentGame = async (userId) => {
 };
 
 
+// Function to fetch current portfolio
+const fetchCurrentPortfolioId = async (userId) => {
+  const sql = 'SELECT p.portfolio_id from portfolios p JOIN users u ON p.game_id = u.current_game WHERE p.user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0].portfolio_id;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+
+
 // Function to fetch current game users in order of highest portfolio value
 const fetchCurrentGameUsers = async (userId) => {
   try {
@@ -758,9 +778,10 @@ app.get('/homepage/:userId', async (req, res) => {
 });
 
 // Route for getting portfolio info
-app.get('/portfolio/:portfolioId', async (req, res) => {
+app.get('/portfolio/:userId', async (req, res) => {
   try {
-    const portfolioId = req.params.portfolioId;
+    const userId = req.params.userId;
+    const portfolioId = await fetchCurrentPortfolioId(userId);
     const portfolioValues = await fetchPortfolioValues(portfolioId);
     const stocks = await fetchPortfolioStocks(portfolioId);
 
@@ -823,8 +844,8 @@ const main = async () => {
   // console.log(await(fetchLastSave(4)));
   // console.log(await(validateSave(4)));
 
-  console.log(await(fetchPortfolioValues(7)));
-  console.log(await(fetchPortfolioStocks(7)));
+  // console.log(await(fetchPortfolioValues(7)));
+  // console.log(await(fetchPortfolioStocks(7)));
 
   // console.log(await(fetchPastPortfolios(1)));
   // console.log(await(fetchGameInfoForPortfolio(1)));
