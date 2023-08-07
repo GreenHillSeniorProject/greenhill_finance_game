@@ -89,8 +89,7 @@
     "negotiator": "^0.6.3",
     "node-addon-api": "^5.1.0",
     "node-cron": "^3.0.2",
-    "nodecron": "^0.2.0"
-  }
+    "nodecron": "^0.2.0",
     "node-domexception": "^1.0.0",
     "node-fetch": "^3.3.1",
     "nopt": "^5.0.0",
