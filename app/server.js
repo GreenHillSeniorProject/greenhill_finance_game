@@ -31,7 +31,7 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.localhost_password,
+  password: config.db_password,
   database: config.db_name,
   insecureAuth: true
 });
@@ -636,9 +636,9 @@ app.post("/signup", async (req, res) => {
 
     await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
 
-    const token = jwt.sign({ id: user_id }, SECRET_KEY);
+    // const token = jwt.sign({ id: user_id }, SECRET_KEY);
 
-    res.send({ message: 'Account created successfully', token: token });
+    res.send({ message: 'Account created successfully'/*, token: token*/ });
   } catch (error) {
     console.error('Error creating account:', error);
     res.status(500).send({ error: 'An error occurred while creating the account' });
@@ -680,7 +680,7 @@ app.post("/signin", (req, res) => {
             if (err) {
               res.send({ err: err });
             } else {
-              res.send({ token: token });
+              res.send({ token: result[0].user_id });
             }
           });
         } else {
@@ -837,8 +837,9 @@ const main = async () => {
 
         if (stockInDB !== null && stockInDB.length > 0) {
           const stockId = stockInDB[0].stock_id;
-          const currentDate = new Date();
-          const formattedDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+          // const currentDate = new Date();
+          // const formattedDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+          const formattedDate = "2023-08-04";
   
           try {
             const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${formattedDate}?apiKey=${config.polygonPrice}`);
