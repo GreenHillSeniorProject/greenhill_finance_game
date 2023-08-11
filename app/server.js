@@ -10,8 +10,8 @@ const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
 const cron = require('node-cron');
-const jwt = require('jsonwebtoken');
-//const jwt = require("jwt-simple");
+const jwt = require("jsonwebtoken");
+const SECRET_KEY = config.SECRET_KEY;
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -32,7 +32,7 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.localhost_password,
+  password: config.db_password,
   database: config.db_name,
   insecureAuth: true
 });
@@ -65,7 +65,7 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-const delay = 12 * 1000; // 12 seconds
+const delay = 5 * 60 * 1000; // 5 minutes
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
@@ -735,19 +735,20 @@ app.post("/signin", (req, res) => {
           res.send({ err: err });
         }
         if (isMatch) {
-          jwt.sign({ id: result[0].user_id }, config.SECRET_KEY, (err, token) => {
-            if (err) {
-              res.send({ err: err });
-            } else {
-              res.send({ token: token });
-            }
-          });
+          // jwt.sign({ id: result[0].user_id }, SECRET_KEY, (err, token) => {
+          //   if (err) {
+          //     res.send({ error: err });
+          //   } else {
+          //     res.json({ token: result[0].user_id });
+          //   }
+          // });
+          res.send({token: result[0].user_id});
         } else {
-          res.send({ message: "Email and password do not match." });
+          res.status(400).send({ message: "Invalid email or password" });
         }
       });
     } else {
-      res.send({ message: "Account does not exist" });
+      res.status(500).send({ message: "Invalid email or password" });
     }
   });
 });
@@ -884,8 +885,6 @@ const main = async () => {
     })));
     */
 
-  
-  /*
   const symbols = [];
   fs.createReadStream('constituents.csv')
     .pipe(csv())
@@ -912,13 +911,14 @@ const main = async () => {
           const currentDate = new Date();
           const formattedDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
           //const formattedDate = "2023-08-04";
+          const date = '2023-06-30'; // specify the date for which you want to fetch the market data
   
           try {
-            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${formattedDate}?apiKey=${config.polygonPrice}`);
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
             const data = response.data;
             const { high, low, open, close } = data;
   
-            const stockHistoryInDB = await getStockHistoryFromDB(stockId, formattedDate);
+            const stockHistoryInDB = await getStockHistoryFromDB(stockId, date);
   
             if (stockHistoryInDB !== null && stockHistoryInDB.length > 0) {
               // Update existing stock history
@@ -939,9 +939,47 @@ const main = async () => {
         await sleep(delay);
       }
     });
-    */
 };
 
+//params required: 
+app.post("/invite-mailto", async (req, res) => {
+  const {first_name, last_name, email} = req.body;
+  //1 is a dummy id for now, shouldn't affect integration testing
+  let mailto = await createInviteEmail(first_name, last_name, email, 1);
+  res.send(mailto);
+});
+
+//shouldn't need the user_id once tokens become available
+const createInviteEmail = async (first_name, last_name, email, user_id) => {
+
+  let code = generateReferralCode();
+
+  var subject = "Invitation to Field Goal Finance";
+  var body = "Hello " + first_name + " " + last_name + "!\n\nDo you have what it takes to outperform your peers? You have been cordially \
+invited to a unique and exclusive gaming community!\n\n\
+\
+Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \
+Your invitation code is " + code + ".\n\n\
+\
+As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
+plus a chance to win a prize!\n\n\
+\
+Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\n\n\
+\
+Thank you for playing!";
+  var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+
+  //insert the invite to the Referrals table in the database
+  //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
+  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
+  const expiration_date = new Date();
+  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
+  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
+  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
+
+
+  return mailtoLink;
+};
 
 /*
 app.post("/create", (req, res) => {
