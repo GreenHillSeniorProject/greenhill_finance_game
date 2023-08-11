@@ -385,7 +385,7 @@ const fetchStockPrice = (stockId) => {
 
 // Function to fetch stock price by ticker(based on opening price)
 const fetchStockPriceByTicker = (ticker) => {
-  const sql = 'SELECT sh.open FROM StockHistory sh JOIN stocks s ON sh.stock_id = s.stock_id WHERE s.ticker = ?';
+  const sql = 'SELECT sh.open FROM StockHistory sh JOIN Stocks s ON sh.stock_id = s.stock_id WHERE s.ticker = ?';
   const values = [ticker];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -399,7 +399,7 @@ const fetchStockPriceByTicker = (ticker) => {
 };
 
 const fetchStockQuantity = (portfolioId, stockId) => {
-  const sql = 'SELECT shares FROM portfolioStock WHERE portfolio_id = ? AND stock_id = ?';
+  const sql = 'SELECT shares FROM PortfolioStock WHERE portfolio_id = ? AND stock_id = ?';
   const values = [portfolioId, stockId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -418,7 +418,7 @@ const fetchStockQuantity = (portfolioId, stockId) => {
 
 // Function to fetch number of unique stocks in portfolio
 const fetchStockCount = (portfolioId) => {
-  const sql = 'SELECT COUNT(*) as count FROM portfolioStock WHERE portfolio_id = ?';
+  const sql = 'SELECT COUNT(*) as count FROM PortfolioStock WHERE portfolio_id = ?';
   const values = [portfolioId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -441,7 +441,7 @@ const updateStockQuantity = async (portfolioId, stockId, quantity) => {
   if (records.length > 0) {
     // record exists, perform update
     const currentShares = records[0].shares;
-    const sql = `UPDATE portfolioStock SET shares = ? WHERE portfolio_id = ? AND stock_id = ?`;
+    const sql = `UPDATE PortfolioStock SET shares = ? WHERE portfolio_id = ? AND stock_id = ?`;
     const values = [currentShares + quantity, portfolioId, stockId];
 
     return new Promise((resolve, reject) => {
@@ -455,7 +455,7 @@ const updateStockQuantity = async (portfolioId, stockId, quantity) => {
     });
   } else {
     // record doesn't exist, perform insert
-    const sql = `INSERT INTO portfolioStock (portfolio_id, stock_id, shares) VALUES (?, ?, ?)`;
+    const sql = `INSERT INTO PortfolioStock (portfolio_id, stock_id, shares) VALUES (?, ?, ?)`;
     const values = [portfolioId, stockId, quantity];
 
     return new Promise((resolve, reject) => {
@@ -472,7 +472,7 @@ const updateStockQuantity = async (portfolioId, stockId, quantity) => {
 
 // Function to check if portfolio stock record exists
 const checkPortfolioStockRecord = (portfolioId, stockId) => {
-  const sql = `SELECT * FROM portfolioStock WHERE portfolio_id = ?  AND stock_id = ?`;
+  const sql = `SELECT * FROM PortfolioStock WHERE portfolio_id = ? AND stock_id = ?`;
   const values = [portfolioId, stockId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -487,7 +487,7 @@ const checkPortfolioStockRecord = (portfolioId, stockId) => {
 
 // track end of day portfolio value
 const updatePortfolioDayValue = async (portfolioId) => {
-  const sql = 'UPDATE portfolios SET yesterday_value = portfolio_value';
+  const sql = 'UPDATE Portfolios SET yesterday_value = portfolio_value';
   const values = [portfolioId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -502,7 +502,7 @@ const updatePortfolioDayValue = async (portfolioId) => {
 
 // Function to fetch user's past portfolios in order of most recent game end date
 const fetchPastPortfolios = (userId) => {
-  const sql = 'SELECT * FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? ORDER BY g.end_date DESC;';
+  const sql = 'SELECT * FROM Portfolios p JOIN GameInfo g ON p.game_id = g.game_id WHERE p.user_id = ? ORDER BY g.end_date DESC;';
   const values = [userId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -521,7 +521,7 @@ const fetchPastPortfolios = (userId) => {
 
 // Function to fetch user's past games in order of most recent game end date
 const fetchPastGames = (userId) => {
-  const sql = 'SELECT g.game_name, g.sponsor, g.type FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? and p.game_id != (SELECT current_game from users where user_id = ?) ORDER BY g.end_date DESC;';
+  const sql = 'SELECT g.game_name, g.sponsor, g.type FROM Portfolios p JOIN GameInfo g ON p.game_id = g.game_id WHERE p.user_id = ? and p.game_id != (SELECT current_game from users where user_id = ?) ORDER BY g.end_date DESC;';
   const values = [userId, userId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -539,7 +539,7 @@ const fetchPastGames = (userId) => {
 }
 
 const fetchGameInfoForPortfolio = (portfolioId) => {
-  const sql = 'SELECT * FROM gameInfo g JOIN portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
+  const sql = 'SELECT * FROM GameInfo g JOIN Portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
   const values = [portfolioId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -559,7 +559,7 @@ const fetchGameInfoForPortfolio = (portfolioId) => {
 
 // Function to fetch all portfolios in a game in order of highest portfolio value
 const fetchGamePortfolios = (gameId) => {
-  const sql = 'SELECT * FROM portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
+  const sql = 'SELECT * FROM Portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
   const values = [gameId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -578,7 +578,7 @@ const fetchGamePortfolios = (gameId) => {
 
 // Function to fetch current game
 const fetchCurrentGame = async (userId) => {
-  const sql = 'SELECT current_game from users WHERE user_id = ?';
+  const sql = 'SELECT current_game from Users WHERE user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -593,7 +593,7 @@ const fetchCurrentGame = async (userId) => {
 
 // Function to fetch current portfolio
 const fetchCurrentPortfolioId = async (userId) => {
-  const sql = 'SELECT p.portfolio_id from portfolios p JOIN users u ON p.game_id = u.current_game WHERE p.user_id = ?';
+  const sql = 'SELECT p.portfolio_id from Portfolios p JOIN Users u ON p.game_id = u.current_game WHERE p.user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -621,7 +621,7 @@ const fetchCurrentGameUsers = async (userId) => {
 
 // Function to fetch all users in a game in order of highest portfolio value
 const fetchGameUsers = (gameId) => {
-  const sql = 'SELECT u.username, p.portfolio_value, g.game_id FROM users u JOIN portfolios p ON u.user_id = p.user_id JOIN gameinfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
+  const sql = 'SELECT u.username, p.portfolio_value, g.game_id FROM Users u JOIN Portfolios p ON u.user_id = p.user_id JOIN GameInfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
   const values = [gameId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -639,7 +639,7 @@ const fetchGameUsers = (gameId) => {
 };
 
 const fetchUserInfo = async (userId) => {
-  const sql = 'SELECT first_name, last_name, username FROM users WHERE user_id = ?';
+  const sql = 'SELECT first_name, last_name, username FROM Users WHERE user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -802,7 +802,7 @@ const main = async () => {
 
   // Schedule task to record end of day portfolio values
   var task = cron.schedule('0 17 * * *', async () => {
-    const sql = `UPDATE portfolios SET yesterday_value = portfolio_value`;
+    const sql = `UPDATE Portfolios SET yesterday_value = portfolio_value`;
     try {
       const results = await new Promise((resolve, reject) => {
         db.query(sql, (error, results, fields) => {
@@ -821,8 +821,8 @@ const main = async () => {
       
   task.start();
 
-  const hashedPassword = bcrypt.hashSync('Pass123', 10);
-  console.log(hashedPassword);
+
+  console.log(await(fetchCurrentPortfolioId(2)));
 
   // console.log(await(fetchUserInfo(2)));
   // console.log(await(fetchPastGames(2)));
@@ -864,26 +864,6 @@ const main = async () => {
   //console.log(await(processActionsTicker(7, actionsTicker)));
   // console.log(await(fetchCurrentGameUsers(2)));
 
-  //const portfolioId = 5; // Replace with the actual portfolio ID
-  /*
-  const actions = [
-    { type: 'buyShare', stockId: 112, quantity: 0 },
-
-    { type: 'sellShare', stockId: 113, quantity: 0 }
-  ];
-  */
-
-  /*
-  console.log(await(processActions(portfolioId, actions)
-    .then((cashBalance) => {
-      console.log("Final cash balance:", cashBalance);
-      // Handle successful execution
-    })
-    .catch((error) => {
-      console.error("Error:", error.message);
-      // Handle error
-    })));
-    */
 
   const symbols = [];
   fs.createReadStream('constituents.csv')
