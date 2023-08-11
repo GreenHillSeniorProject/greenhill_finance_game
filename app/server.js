@@ -200,6 +200,29 @@ const processActions = async (portfolioId, actions) => {
   }
 };
 
+// Function to see portfolio value results after a list of transactions [ticker1: -2, ticker2: 2]
+const processActionsTicker = async (portfolioId, actions) => {
+  try {
+    const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
+    let cashBalance = parseFloat(cash_value, 2);
+    console.log(actions);
+    console.log(`Cash balance: ${cashBalance}`);
+
+    for (const ticker in actions) {
+      const stockPrice = await fetchStockPriceByTicker(ticker);
+      console.log(stockPrice);
+      console.log(actions[ticker]);
+      cashBalance -= stockPrice * actions[ticker], 2;
+    }
+    cashBalance = cashBalance.toFixed(2);
+    console.log(cashBalance);
+
+    return cashBalance;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Function to get timestamp of last portfolio save
 const fetchLastSave = async (portfolioId) => {
   const sql = 'SELECT last_save FROM Portfolios WHERE portfolio_id = ?';
@@ -345,10 +368,25 @@ const updatePortfolioValues = async (portfolioId, assetValue, cashValue, portfol
   }
 };
 
-// Function to fetch stock price (based on opening price)
+// Function to fetch stock price by Id (based on opening price)
 const fetchStockPrice = (stockId) => {
   const sql = 'SELECT open FROM StockHistory WHERE stock_id = ?';
   const values = [stockId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(parseFloat(results[0].open, 2));
+      }
+    });
+  });
+};
+
+// Function to fetch stock price by ticker(based on opening price)
+const fetchStockPriceByTicker = (ticker) => {
+  const sql = 'SELECT sh.open FROM StockHistory sh JOIN stocks s ON sh.stock_id = s.stock_id WHERE s.ticker = ?';
+  const values = [ticker];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
       if (error) {
@@ -553,6 +591,23 @@ const fetchCurrentGame = async (userId) => {
 };
 
 
+// Function to fetch current portfolio
+const fetchCurrentPortfolioId = async (userId) => {
+  const sql = 'SELECT p.portfolio_id from portfolios p JOIN users u ON p.game_id = u.current_game WHERE p.user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0].portfolio_id;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+
+
 // Function to fetch current game users in order of highest portfolio value
 const fetchCurrentGameUsers = async (userId) => {
   try {
@@ -620,6 +675,9 @@ app.post("/signup", async (req, res) => {
     res.status(400).send({ error: 'Invalid email or password format' });
     return;
   }
+
+  console.log(req.body);
+  console.log(invitation_code);
 
   try {
     const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
@@ -718,9 +776,10 @@ app.get('/homepage/:userId', async (req, res) => {
 });
 
 // Route for getting portfolio info
-app.get('/portfolio/:portfolioId', async (req, res) => {
+app.get('/portfolio/:userId', async (req, res) => {
   try {
-    const portfolioId = req.params.portfolioId;
+    const userId = req.params.userId;
+    const portfolioId = await fetchCurrentPortfolioId(userId);
     const portfolioValues = await fetchPortfolioValues(portfolioId);
     const stocks = await fetchPortfolioStocks(portfolioId);
 
@@ -762,6 +821,9 @@ const main = async () => {
       
   task.start();
 
+  const hashedPassword = bcrypt.hashSync('Pass123', 10);
+  console.log(hashedPassword);
+
   // console.log(await(fetchUserInfo(2)));
   // console.log(await(fetchPastGames(2)));
 
@@ -780,8 +842,8 @@ const main = async () => {
   // console.log(await(fetchLastSave(4)));
   // console.log(await(validateSave(4)));
 
-  console.log(await(fetchPortfolioValues(7)));
-  console.log(await(fetchPortfolioStocks(7)));
+  // console.log(await(fetchPortfolioValues(7)));
+  // console.log(await(fetchPortfolioStocks(7)));
 
   // console.log(await(fetchPastPortfolios(1)));
   // console.log(await(fetchGameInfoForPortfolio(1)));
@@ -792,7 +854,14 @@ const main = async () => {
     113: -4,
     115: 200
   };
+
+  const actionsTicker = {
+    "MMM": -6,
+    "AOS": -4,
+    "ABBV": 200
+  };
   //console.log(await(processActions(7, actions)));
+  //console.log(await(processActionsTicker(7, actionsTicker)));
   // console.log(await(fetchCurrentGameUsers(2)));
 
   //const portfolioId = 5; // Replace with the actual portfolio ID
@@ -839,6 +908,9 @@ const main = async () => {
 
         if (stockInDB !== null && stockInDB.length > 0) {
           const stockId = stockInDB[0].stock_id;
+          const currentDate = new Date();
+          const formattedDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+          //const formattedDate = "2023-08-04";
           const date = '2023-06-30'; // specify the date for which you want to fetch the market data
   
           try {
