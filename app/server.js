@@ -821,8 +821,8 @@ const main = async () => {
       
   task.start();
 
-  const hashedPassword = bcrypt.hashSync('Pass123', 10);
-  console.log(hashedPassword);
+
+  console.log(await(fetchCurrentPortfolioId(2)));
 
   // console.log(await(fetchUserInfo(2)));
   // console.log(await(fetchPastGames(2)));
@@ -864,26 +864,6 @@ const main = async () => {
   //console.log(await(processActionsTicker(7, actionsTicker)));
   // console.log(await(fetchCurrentGameUsers(2)));
 
-  //const portfolioId = 5; // Replace with the actual portfolio ID
-  /*
-  const actions = [
-    { type: 'buyShare', stockId: 112, quantity: 0 },
-
-    { type: 'sellShare', stockId: 113, quantity: 0 }
-  ];
-  */
-
-  /*
-  console.log(await(processActions(portfolioId, actions)
-    .then((cashBalance) => {
-      console.log("Final cash balance:", cashBalance);
-      // Handle successful execution
-    })
-    .catch((error) => {
-      console.error("Error:", error.message);
-      // Handle error
-    })));
-    */
 
   const symbols = [];
   fs.createReadStream('constituents.csv')
