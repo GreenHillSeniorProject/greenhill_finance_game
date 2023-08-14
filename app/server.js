@@ -850,7 +850,7 @@ function runQuery(query, params) {
 }
 
 // Route for handling user sign in requests
-app.post("/signin", (req, res) => {
+app.post("/signin", async (req, res) => {
   let { email, password } = req.body;
 
   if (typeof email !== 'string' || typeof password !== 'string') {
@@ -863,20 +863,13 @@ app.post("/signin", (req, res) => {
       res.send({ err: err });
     }
     if (result.length > 0) {
-      bcrypt.compare(password, result[0].password, (err, isMatch) => {
+      bcrypt.compare(password, result[0].password, async (err, isMatch) => {
         if (err) {
           res.send({ err: err });
         }
         if (isMatch) {
-          
-          jwt.sign({ id: result[0].user_id }, config.SECRET_KEY, (err, token) => {
-            if (err) {
-              res.status(500).json({ error: err });
-            } else {
-              res.json({ token });
-            }
-           });
-          res.send({token: result[0].user_id});
+          const token = await getTokenFromUserId(result[0].user_id);
+          res.send({token});
         } else {
           res.status(400).send({ message: "Invalid email or password" });
         }
