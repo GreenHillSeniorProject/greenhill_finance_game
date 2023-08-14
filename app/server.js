@@ -32,7 +32,7 @@ app.use(cors());
 const db = mysql.createConnection({
   user: "root",
   host: "localhost",
-  password: config.db_password,
+  password: config.localhost_password,
   database: config.db_name,
   insecureAuth: true
 });
@@ -667,6 +667,20 @@ function generateReferralCode() {
   return referralCode;
 }
 
+// Define the function to get user data by ID
+const getUserById = async (userId) => {
+  try {
+    const [rows] = await db.promise().execute('SELECT * FROM users WHERE user_id = ?', [userId]);
+    if (rows && rows.length > 0) {
+      return rows[0];
+    }
+    return null; // No user found
+  } catch (error) {
+    console.error('Error fetching user data by ID:', error);
+    throw error;
+  }
+};
+
 
 app.post("/signup", async (req, res) => {
   const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
@@ -678,7 +692,6 @@ app.post("/signup", async (req, res) => {
 
   console.log(req.body);
   console.log(invitation_code);
-
   try {
     const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
     if (referralResult.length === 0) {
@@ -695,7 +708,7 @@ app.post("/signup", async (req, res) => {
 
     await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
 
-    const token = jwt.sign({ id: user_id }, SECRET_KEY);
+    const token = jwt.sign({ userId: user_id }, config.SECRET_KEY);
 
     res.send({ message: 'Account created successfully', token: token });
   } catch (error) {
@@ -717,7 +730,7 @@ function runQuery(query, params) {
 }
 
 // Route for handling user sign in requests
-app.post("/signin", (req, res) => {
+/* app.post("/signin", (req, res) => {
   let { email, password } = req.body;
 
   if (typeof email !== 'string' || typeof password !== 'string') {
@@ -752,10 +765,40 @@ app.post("/signin", (req, res) => {
     }
   });
 });
+ */
+
+app.post('/signin', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Retrieve user from the database
+    const [rows] = await db.runQuery('SELECT * FROM users WHERE email = ?', [email]);
+
+    if (!rows || rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Compare passwords
+    const passwordMatch = await bcrypt.compare(password, rows[0].password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ userId: rows[0].id }, config.SECRET_KEY, { expiresIn: '1h' });
+
+    res.json({ token });
+  } catch (error) {
+    console.error('Error signing in:', error);
+    res.status(500).json({ error: 'An error occurred while signing in' });
+  }
+});
+
 
 
 // Route for getting user's homepage
-app.get('/homepage/:userId', async (req, res) => {
+/* app.get('/homepage/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     const user = await fetchUserInfo(userId);
@@ -772,6 +815,35 @@ app.get('/homepage/:userId', async (req, res) => {
     }
   } catch (error) {
     res.send({ err: error.message });
+  }
+}); */
+
+app.get('/homepage/:userId', async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Invalid authorization header' });
+  }
+
+  const token = authHeader.split(' ')[1]; // Extract the token part
+  
+  try {
+    const decodedToken = jwt.verify(token, config.SECRET_KEY);
+    const userId = decodedToken.userId;
+
+    // Fetch user data from the database based on userId
+    const user = await getUserById(userId); // Implement the function to retrieve user data
+
+    // Construct and send the response
+    const responseData = {
+      user: user
+      // other relevant data
+    };
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    res.status(401).json({ error: 'Invalid token' });
   }
 });
 
@@ -890,8 +962,7 @@ const main = async () => {
           const stockId = stockInDB[0].stock_id;
           const currentDate = new Date();
           const formattedDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-          //const formattedDate = "2023-08-04";
-          const date = '2023-06-30'; // specify the date for which you want to fetch the market data
+          const date = "2023-08-10"; // specify the date for which you want to fetch the market data
   
           try {
             const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
@@ -931,7 +1002,6 @@ app.post("/invite-mailto", async (req, res) => {
 
 //shouldn't need the user_id once tokens become available
 const createInviteEmail = async (first_name, last_name, email, user_id) => {
-
   let code = generateReferralCode();
 
   var subject = "Invitation to Field Goal Finance";
