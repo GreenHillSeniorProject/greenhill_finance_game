@@ -964,13 +964,12 @@ app.get('/homepage', async (req, res) => {
     const user = await getUserById(userId); // Implement the function to retrieve user data
     const currGameUsers = await fetchCurrentGameUsers(userId);
     const pastGames = await fetchPastGames(userId);
-    // 
 
     // Construct and send the response
     const responseData = {
-      user,
-      currGameUsers,
-      pastGames
+      user: user,
+      currGameUsers: currGameUsers,
+      pastGames: pastGames
       // other relevant data
     };
 
@@ -979,6 +978,38 @@ app.get('/homepage', async (req, res) => {
     console.error('Error decoding token:', error);
     res.status(401).json({ error: 'Invalid token' });
   }
+});
+
+app.post('/logout', (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ message: 'Token is missing in request' });
+  }
+
+  // Add the token to the invalidatedTokens blacklist
+  invalidatedTokens.add(token);
+
+  // TODO: You could also persist the blacklist in a file or database for better durability
+
+  res.status(200).json({ message: 'Logout successful' });
+});
+
+// Middleware to verify token on protected routes
+app.use('/protected', (req, res, next) => {
+  const { token } = req.headers;
+
+  if (!token || invalidatedTokens.has(token)) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  // Continue with the next middleware if the token is valid
+  next();
+});
+
+// Protected route example
+app.get('/protected/data', (req, res) => {
+  res.status(200).json({ message: 'Protected data accessed successfully' });
 });
 
 // Route for getting portfolio info
