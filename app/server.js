@@ -13,6 +13,8 @@ const cron = require('node-cron');
 const jwt = require("jsonwebtoken");
 const SECRET_KEY = config.SECRET_KEY;
 
+let inviteAdvisorRoutes = require('./routes/inviteRoutes');
+
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
   try {
@@ -1152,6 +1154,7 @@ async function validatePassword(password, hashedPassword) {
 // new updated code!!! NEW STRUCTURE!
 //
 
+app.use('/', inviteAdvisorRoutes);
 
 app.listen(3001, () => {
   console.log("local host server running")
