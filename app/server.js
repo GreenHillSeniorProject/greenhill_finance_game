@@ -704,7 +704,7 @@ const fetchWeekDelta = async (userId, portfolio_id) => {
 
 //Function to calculate average rank
 const fetchAveRanking =  async (userId) => {
-  const sql = 'SELECT AVG(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE user_id = ?';
+  const sql = 'SELECT AVG(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -718,7 +718,7 @@ const fetchAveRanking =  async (userId) => {
 
 //Function to calculate # of 1st rank games
 const fetchNumber1stRankedGames =  async (userId) => {
-  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
   const values = [1, userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -732,7 +732,7 @@ const fetchNumber1stRankedGames =  async (userId) => {
 
 //Function to calculate # of 2nd rank games
 const fetchNumber2ndRankedGames =  async (userId) => {
-  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
   const values = [2, userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -746,7 +746,7 @@ const fetchNumber2ndRankedGames =  async (userId) => {
 
 //Function to calculate # of 3rd rank games
 const fetchNumber3rdRankedGames =  async (userId) => {
-  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
   const values = [3, userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -970,13 +970,23 @@ app.get('/homepage', async (req, res) => {
     const user = await getUserById(userId); // Implement the function to retrieve user data
     const currGameUsers = await fetchCurrentGameUsers(userId);
     const pastGames = await fetchPastGames(userId);
+    const aveRank = await fetchAveRanking(userId);
+    const firstRank = await fetchNumber1stRankedGames(userId);
+    const secondRank = await fetchNumber2ndRankedGames(userId);
+    const thirdRank = await fetchNumber3rdRankedGames(userId);
+
 
     // Construct and send the response
     const responseData = {
       user: user,
       currGameUsers: currGameUsers,
-      pastGames: pastGames
-      // other relevant data
+      pastGames: pastGames,
+      ranks: {
+        aveRank: aveRank,
+        firstRank: firstRank,
+        secondRank: secondRank,
+        thirdRank: thirdRank
+      }
     };
 
     res.json(responseData);
