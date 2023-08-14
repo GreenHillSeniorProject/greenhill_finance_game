@@ -973,8 +973,13 @@ app.get('/homepage', async (req, res) => {
     const aveRank = await fetchAveRanking(userId);
     const firstRank = await fetchNumber1stRankedGames(userId);
     const secondRank = await fetchNumber2ndRankedGames(userId);
+<<<<<<< HEAD
     const thirdRank = await fetchNumber3rdRankedGames(userId);
 
+=======
+    const thirdRank = await fetchNumber3rdRankedGames(userId);\
+    const aveRank = await fetchAveRanking(userId);
+>>>>>>> 4aca701... homepage response stuff
 
     // Construct and send the response
     const responseData = {
@@ -982,10 +987,17 @@ app.get('/homepage', async (req, res) => {
       currGameUsers: currGameUsers,
       pastGames: pastGames,
       ranks: {
+<<<<<<< HEAD
         aveRank: aveRank,
         firstRank: firstRank,
         secondRank: secondRank,
         thirdRank: thirdRank
+=======
+        firstRank: firstRank,
+        secondRank: secondRank,
+        thirdRank: thirdRank,
+        aveRank: aveRank
+>>>>>>> 4aca701... homepage response stuff
       }
     };
 
