@@ -772,21 +772,27 @@ app.post('/signin', async (req, res) => {
 
   try {
     // Retrieve user from the database
-    const [rows] = await db.runQuery('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await runQuery('SELECT * FROM users WHERE email = ?', [email]);
 
     if (!rows || rows.length === 0) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    const user = rows[0];
+
     // Compare passwords
-    const passwordMatch = await bcrypt.compare(password, rows[0].password);
+    if (!user.password) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Generate JWT token
-    const token = jwt.sign({ userId: rows[0].id }, config.SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user.id }, config.SECRET_KEY, { expiresIn: '1h' });
 
     res.json({ token });
   } catch (error) {
