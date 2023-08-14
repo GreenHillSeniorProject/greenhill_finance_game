@@ -666,7 +666,7 @@ const fetchUserInfo = async (userId) => {
 
 //Function to calculate day delta
 const fetchDayDelta = async (userId, portfolio_id) => {
-  const sql = 'SELECT portfolio_value-yesterday_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
+  const sql = 'SELECT portfolio_value - yesterday_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
   const values = [userId,userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -680,7 +680,7 @@ const fetchDayDelta = async (userId, portfolio_id) => {
 
 //Function to calculate week delta
 const fetchWeekDelta = async (userId, portfolio_id) => {
-  const sql = 'SELECT portfolio_value-last_week_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
+  const sql = 'SELECT portfolio_value - last_week_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
   const values = [userId,userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -746,6 +746,28 @@ const fetchNumber3rdRankedGames =  async (userId) => {
   } catch (error) {
     throw error;
   } 
+};
+
+const getTokenFromUserId = (userId) => {
+  return new Promise((resolve, reject) => {
+    jwt.sign(userId, SECRET_KEY, (err, token) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(token);
+    });
+  });
+};
+
+const getUserIdFromToken = (token) => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, SECRET_KEY, (err, payload) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(payload.user_id);
+    });
+  });
 };
 
 
@@ -926,7 +948,7 @@ try {
   }
 }); */
 
-app.get('/homepage/:userId', async (req, res) => {
+app.get('/homepage', async (req, res) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -936,15 +958,19 @@ app.get('/homepage/:userId', async (req, res) => {
   const token = authHeader.split(' ')[1]; // Extract the token part
   
   try {
-    const decodedToken = jwt.verify(token, config.SECRET_KEY);
-    const userId = decodedToken.userId;
+    const userId = await getUserIdFromToken(token);
 
     // Fetch user data from the database based on userId
     const user = await getUserById(userId); // Implement the function to retrieve user data
+    const currGameUsers = await fetchCurrentGameUsers(userId);
+    const pastGames = await fetchPastGames(userId);
+    // 
 
     // Construct and send the response
     const responseData = {
-      user: user
+      user,
+      currGameUsers,
+      pastGames
       // other relevant data
     };
 
