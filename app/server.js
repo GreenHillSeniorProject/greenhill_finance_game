@@ -974,10 +974,14 @@ app.get('/homepage', async (req, res) => {
     const firstRank = await fetchNumber1stRankedGames(userId);
     const secondRank = await fetchNumber2ndRankedGames(userId);
 <<<<<<< HEAD
+<<<<<<< HEAD
     const thirdRank = await fetchNumber3rdRankedGames(userId);
 
 =======
     const thirdRank = await fetchNumber3rdRankedGames(userId);\
+=======
+    const thirdRank = await fetchNumber3rdRankedGames(userId);
+>>>>>>> 3b0b07e... homepage resp fix
     const aveRank = await fetchAveRanking(userId);
 >>>>>>> 4aca701... homepage response stuff
 
