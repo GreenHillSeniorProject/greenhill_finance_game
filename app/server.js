@@ -760,7 +760,7 @@ const fetchNumber3rdRankedGames =  async (userId) => {
 
 const getTokenFromUserId = (userId) => {
   return new Promise((resolve, reject) => {
-    jwt.sign(userId, SECRET_KEY, (err, token) => {
+    jwt.sign(userId.toString(), SECRET_KEY, (err, token) => {
       if (err) {
         return reject(err);
       }
@@ -770,12 +770,15 @@ const getTokenFromUserId = (userId) => {
 };
 
 const getUserIdFromToken = (token) => {
+  console.log("in get user id", token);
   return new Promise((resolve, reject) => {
-    jwt.verify(token, SECRET_KEY, (err, payload) => {
+    jwt.verify(token.toString(), SECRET_KEY, (err, payload) => {
       if (err) {
+        console.log('in get user id error');
         return reject(err);
       }
-      resolve(payload.user_id);
+      console.log('in get user id resolve', payload);
+      resolve(payload);
     });
   });
 };
