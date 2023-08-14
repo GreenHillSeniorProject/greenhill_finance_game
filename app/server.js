@@ -732,6 +732,7 @@ function runQuery(query, params) {
 // Route for handling user sign in requests
 app.post("/signin", (req, res) => {
   let { email, password } = req.body;
+
   if (typeof email !== 'string' || typeof password !== 'string') {
     res.status(400).send({ message: "Invalid email or password format" });
     return;
@@ -821,7 +822,7 @@ try {
   }
 }); */
 
-app.get('/homepage', async (req, res) => {
+app.get('/homepage/:userId', async (req, res) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -1146,6 +1147,11 @@ async function validatePassword(password, hashedPassword) {
   }
 };
 */
+
+//
+// new updated code!!! NEW STRUCTURE!
+//
+
 
 app.listen(3001, () => {
   console.log("local host server running")
