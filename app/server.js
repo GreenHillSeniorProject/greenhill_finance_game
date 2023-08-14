@@ -692,7 +692,6 @@ app.post("/signup", async (req, res) => {
 
   console.log(req.body);
   console.log(invitation_code);
-
   try {
     const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
     if (referralResult.length === 0) {
@@ -847,10 +846,6 @@ app.get('/homepage/:userId', async (req, res) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 });
-
-
-
-
 
 // Route for getting portfolio info
 app.get('/portfolio/:userId', async (req, res) => {
@@ -1007,7 +1002,6 @@ app.post("/invite-mailto", async (req, res) => {
 
 //shouldn't need the user_id once tokens become available
 const createInviteEmail = async (first_name, last_name, email, user_id) => {
-
   let code = generateReferralCode();
 
   var subject = "Invitation to Field Goal Finance";
