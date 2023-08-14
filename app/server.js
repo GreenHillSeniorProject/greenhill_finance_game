@@ -49,6 +49,19 @@ app.get('/faq', (req, res) => {
   });
 });
 
+/* app.post('/faq/add', (req, res) => {
+  try {
+  const question = req.body.question;
+  const answer = req.body.answer;
+  var sql = 'INSERT INTO faq (question, answer, date_created) VALUES (?,?,now())';
+  const values = [question, answer];
+  const sqlAsync = util.promisify(db.query).bind(db);
+  await sqlAsync(sql, [username,phone_number,hashedPassword,userId]);
+  } catch (error) {
+    res.send({ err: error.message });
+  }
+}); */
+
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
   try {
@@ -651,6 +664,91 @@ const fetchUserInfo = async (userId) => {
   }
 };
 
+//Function to calculate day delta
+const fetchDayDelta = async (userId, portfolio_id) => {
+  const sql = 'SELECT portfolio_value-yesterday_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
+//Function to calculate week delta
+const fetchWeekDelta = async (userId, portfolio_id) => {
+  const sql = 'SELECT portfolio_value-last_week_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
+//Function to calculate average rank
+const fetchAveRanking =  async (userId) => {
+  const sql = 'SELECT AVG(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM portfolios ORDER BY game_id) ranking_table WHERE user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  } 
+};
+
+//Function to calculate # of 1st rank games
+const fetchNumber1stRankedGames =  async (userId) => {
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [1, userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  } 
+};
+
+//Function to calculate # of 2nd rank games
+const fetchNumber2ndRankedGames =  async (userId) => {
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [2, userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  } 
+};
+
+//Function to calculate # of 3rd rank games
+const fetchNumber3rdRankedGames =  async (userId) => {
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [3, userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  } 
+};
+
+
 // Function to generate a new referral code
 function generateReferralCode() {
   // Generate a unique referral code according to your requirements
@@ -808,8 +906,14 @@ try {
     const user = await fetchUserInfo(userId);
     const currGameUsers = await fetchCurrentGameUsers(userId);
     const pastGames = await fetchPastGames(userId);
+    const dayDelta = await fetchDayDelta(userId);
+    const weekDelta = await fetchWeekDelta (userId);
+    const avgRank = await fetchAveRanking(userId);
+    const no1stRank = await fetchNumber1stRankedGames(userId);
+    const no2ndRank = await fetchNumber2ndRankedGames(userId);
+    const no3rdRank = await fetchNumber3rdRankedGames(userId);
 
-    const data = { user, currGameUsers, pastGames};
+    const data = { user, currGameUsers, pastGames, avgRank, no1stRank, no2ndRank, no3rdRank};
 
     if (user) {
       res.json(data);
