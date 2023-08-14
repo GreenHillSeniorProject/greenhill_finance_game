@@ -9,9 +9,9 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const util = require('util');
 const config = require('../config.json');
-const referralCodeGenerator = require('referral-code-generator');
 const cron = require('node-cron');
-//const jwt = require("jwt-simple");
+const jwt = require("jsonwebtoken");
+const SECRET_KEY = config.SECRET_KEY;
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -78,7 +78,7 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-const delay = 1000 * 12; // 12 seconds
+const delay = 5 * 60 * 1000; // 5 minutes
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
@@ -213,6 +213,29 @@ const processActions = async (portfolioId, actions) => {
   }
 };
 
+// Function to see portfolio value results after a list of transactions [ticker1: -2, ticker2: 2]
+const processActionsTicker = async (portfolioId, actions) => {
+  try {
+    const { cash_value, asset_value, portfolio_value } = await fetchPortfolioValues(portfolioId);
+    let cashBalance = parseFloat(cash_value, 2);
+    console.log(actions);
+    console.log(`Cash balance: ${cashBalance}`);
+
+    for (const ticker in actions) {
+      const stockPrice = await fetchStockPriceByTicker(ticker);
+      console.log(stockPrice);
+      console.log(actions[ticker]);
+      cashBalance -= stockPrice * actions[ticker], 2;
+    }
+    cashBalance = cashBalance.toFixed(2);
+    console.log(cashBalance);
+
+    return cashBalance;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Function to get timestamp of last portfolio save
 const fetchLastSave = async (portfolioId) => {
   const sql = 'SELECT last_save FROM Portfolios WHERE portfolio_id = ?';
@@ -332,6 +355,19 @@ const fetchPortfolioValues = async (portfolioId) => {
   }
 };
 
+const fetchPortfolioStocks = async (portfolioId) => {
+  const sql = 'SELECT * FROM PortfolioStock p JOIN Stocks s on s.stock_id = p.stock_id WHERE portfolio_id = ?'
+  const values = [portfolioId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results;
+  } catch (error) {
+    throw error;
+  }
+};
+
 const updatePortfolioValues = async (portfolioId, assetValue, cashValue, portfolioValue) => {
   const sql = 'UPDATE Portfolios SET asset_value = ?, cash_value = ?, portfolio_value = ? WHERE portfolio_id = ?'
   const values = [assetValue, cashValue, portfolioValue, portfolioId];
@@ -345,7 +381,7 @@ const updatePortfolioValues = async (portfolioId, assetValue, cashValue, portfol
   }
 };
 
-// Function to fetch stock price (based on opening price)
+// Function to fetch stock price by Id (based on opening price)
 const fetchStockPrice = (stockId) => {
   const sql = 'SELECT open FROM StockHistory WHERE stock_id = ?';
   const values = [stockId];
@@ -360,8 +396,23 @@ const fetchStockPrice = (stockId) => {
   });
 };
 
+// Function to fetch stock price by ticker(based on opening price)
+const fetchStockPriceByTicker = (ticker) => {
+  const sql = 'SELECT sh.open FROM StockHistory sh JOIN Stocks s ON sh.stock_id = s.stock_id WHERE s.ticker = ?';
+  const values = [ticker];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(parseFloat(results[0].open, 2));
+      }
+    });
+  });
+};
+
 const fetchStockQuantity = (portfolioId, stockId) => {
-  const sql = 'SELECT shares FROM portfolioStock WHERE portfolio_id = ? AND stock_id = ?';
+  const sql = 'SELECT shares FROM PortfolioStock WHERE portfolio_id = ? AND stock_id = ?';
   const values = [portfolioId, stockId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -380,7 +431,7 @@ const fetchStockQuantity = (portfolioId, stockId) => {
 
 // Function to fetch number of unique stocks in portfolio
 const fetchStockCount = (portfolioId) => {
-  const sql = 'SELECT COUNT(*) as count FROM portfolioStock WHERE portfolio_id = ?';
+  const sql = 'SELECT COUNT(*) as count FROM PortfolioStock WHERE portfolio_id = ?';
   const values = [portfolioId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -403,7 +454,7 @@ const updateStockQuantity = async (portfolioId, stockId, quantity) => {
   if (records.length > 0) {
     // record exists, perform update
     const currentShares = records[0].shares;
-    const sql = `UPDATE portfolioStock SET shares = ? WHERE portfolio_id = ? AND stock_id = ?`;
+    const sql = `UPDATE PortfolioStock SET shares = ? WHERE portfolio_id = ? AND stock_id = ?`;
     const values = [currentShares + quantity, portfolioId, stockId];
 
     return new Promise((resolve, reject) => {
@@ -417,7 +468,7 @@ const updateStockQuantity = async (portfolioId, stockId, quantity) => {
     });
   } else {
     // record doesn't exist, perform insert
-    const sql = `INSERT INTO portfolioStock (portfolio_id, stock_id, shares) VALUES (?, ?, ?)`;
+    const sql = `INSERT INTO PortfolioStock (portfolio_id, stock_id, shares) VALUES (?, ?, ?)`;
     const values = [portfolioId, stockId, quantity];
 
     return new Promise((resolve, reject) => {
@@ -434,7 +485,7 @@ const updateStockQuantity = async (portfolioId, stockId, quantity) => {
 
 // Function to check if portfolio stock record exists
 const checkPortfolioStockRecord = (portfolioId, stockId) => {
-  const sql = `SELECT * FROM portfolioStock WHERE portfolio_id = ?  AND stock_id = ?`;
+  const sql = `SELECT * FROM PortfolioStock WHERE portfolio_id = ? AND stock_id = ?`;
   const values = [portfolioId, stockId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -449,7 +500,7 @@ const checkPortfolioStockRecord = (portfolioId, stockId) => {
 
 // track end of day portfolio value
 const updatePortfolioDayValue = async (portfolioId) => {
-  const sql = 'UPDATE portfolios SET yesterday_value = portfolio_value';
+  const sql = 'UPDATE Portfolios SET yesterday_value = portfolio_value';
   const values = [portfolioId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -464,7 +515,7 @@ const updatePortfolioDayValue = async (portfolioId) => {
 
 // Function to fetch user's past portfolios in order of most recent game end date
 const fetchPastPortfolios = (userId) => {
-  const sql = 'SELECT * FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? ORDER BY g.end_date DESC;';
+  const sql = 'SELECT * FROM Portfolios p JOIN GameInfo g ON p.game_id = g.game_id WHERE p.user_id = ? ORDER BY g.end_date DESC;';
   const values = [userId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -483,7 +534,7 @@ const fetchPastPortfolios = (userId) => {
 
 // Function to fetch user's past games in order of most recent game end date
 const fetchPastGames = (userId) => {
-  const sql = 'SELECT g.game_name, g.sponsor, g.type FROM portfolios p JOIN gameinfo g ON p.game_id = g.game_id WHERE p.user_id = ? and p.game_id != (SELECT current_game from users where user_id = ?) ORDER BY g.end_date DESC;';
+  const sql = 'SELECT g.game_name, g.sponsor, g.type FROM Portfolios p JOIN GameInfo g ON p.game_id = g.game_id WHERE p.user_id = ? and p.game_id != (SELECT current_game from users where user_id = ?) ORDER BY g.end_date DESC;';
   const values = [userId, userId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -501,7 +552,7 @@ const fetchPastGames = (userId) => {
 }
 
 const fetchGameInfoForPortfolio = (portfolioId) => {
-  const sql = 'SELECT * FROM gameInfo g JOIN portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
+  const sql = 'SELECT * FROM GameInfo g JOIN Portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
   const values = [portfolioId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -521,7 +572,7 @@ const fetchGameInfoForPortfolio = (portfolioId) => {
 
 // Function to fetch all portfolios in a game in order of highest portfolio value
 const fetchGamePortfolios = (gameId) => {
-  const sql = 'SELECT * FROM portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
+  const sql = 'SELECT * FROM Portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
   const values = [gameId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -540,7 +591,7 @@ const fetchGamePortfolios = (gameId) => {
 
 // Function to fetch current game
 const fetchCurrentGame = async (userId) => {
-  const sql = 'SELECT current_game from users WHERE user_id = ?';
+  const sql = 'SELECT current_game from Users WHERE user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -551,6 +602,23 @@ const fetchCurrentGame = async (userId) => {
     throw error;
   }
 };
+
+
+// Function to fetch current portfolio
+const fetchCurrentPortfolioId = async (userId) => {
+  const sql = 'SELECT p.portfolio_id from Portfolios p JOIN Users u ON p.game_id = u.current_game WHERE p.user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0].portfolio_id;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
 
 
 // Function to fetch current game users in order of highest portfolio value
@@ -566,7 +634,7 @@ const fetchCurrentGameUsers = async (userId) => {
 
 // Function to fetch all users in a game in order of highest portfolio value
 const fetchGameUsers = (gameId) => {
-  const sql = 'SELECT u.username, p.portfolio_value, g.game_id FROM users u JOIN portfolios p ON u.user_id = p.user_id JOIN gameinfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
+  const sql = 'SELECT u.username, p.portfolio_value, g.game_id FROM Users u JOIN Portfolios p ON u.user_id = p.user_id JOIN GameInfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
   const values = [gameId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -584,7 +652,7 @@ const fetchGameUsers = (gameId) => {
 };
 
 const fetchUserInfo = async (userId) => {
-  const sql = 'SELECT first_name, last_name, username FROM users WHERE user_id = ?';
+  const sql = 'SELECT first_name, last_name, username FROM Users WHERE user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -697,142 +765,142 @@ function generateReferralCode() {
   return referralCode;
 }
 
-
-const generateReferalCode = async () => {
-  return referralCodeGenerator.alpha('uppercase', 4);
-}
-
-//params required: 
-app.get("/invite-email-mailto", (req, res) =>{
-  const {first_name, last_name, email} = req.body;
-  res.send(createInviteEmail(first_name, last_name, email));
-});
-
-//shouldn't need the user_id once tokens become available
-const createInviteEmail = async (first_name, last_name, email, user_id) => {
-
-  let code = await generateReferalCode();
-
-  var subject = "Invitation to Field Goal Finance";
-  var body = "Hello " + first_name + " " + last_name + "! Do you have what it takes to outperform your peers? You have been cordially \
-  invited to a unique and exclusive gaming community!\
-  \
-  Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \
-  Your invitation code is " + code + ".\
-  \
-  As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
-  plus a chance to win a prize!\
-  \
-  Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\
-  \
-  Thank you for playing!";
-  var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-
-  //insert the invite to the Referrals table in the database
-  //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
-  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-  const expiration_date = new Date();
-  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
-
-  res.send(mailtoLink);
+// Define the function to get user data by ID
+const getUserById = async (userId) => {
+  try {
+    const [rows] = await db.promise().execute('SELECT * FROM users WHERE user_id = ?', [userId]);
+    if (rows && rows.length > 0) {
+      return rows[0];
+    }
+    return null; // No user found
+  } catch (error) {
+    console.error('Error fetching user data by ID:', error);
+    throw error;
+  }
 };
 
 
-
-// Route for handling user sign up requests
 app.post("/signup", async (req, res) => {
   const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
 
-  // Generate a new referral code
-  const referral_code = generateReferralCode();
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    res.status(400).send({ error: 'Invalid email or password format' });
+    return;
+  }
 
+  console.log(req.body);
+  console.log(invitation_code);
   try {
-    // Validate the invitation code
-    const referralQuery = 'SELECT referrer_id FROM Referrals WHERE referral_code = ?';
-    const referralQueryAsync = util.promisify(db.query).bind(db);
-    const referralResult = await referralQueryAsync(referralQuery, [invitation_code]);
-
+    const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
     if (referralResult.length === 0) {
       res.send({ error: 'Invalid invitation code' });
       return;
     }
-
     const referrer_id = referralResult[0].referrer_id;
-    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert the user into the database
-    const userQuery = 'INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)';
-    const userQueryAsync = util.promisify(db.query).bind(db);
-    await userQueryAsync(userQuery, [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+    const hashedPassword = bcrypt.hashSync(password, 10);
 
-    // // Insert the referral information
-    // const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-    // const expiration_date = new Date();
-    // expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-    // const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-    // await referralInsertQueryAsync(referralInsertQuery, [referrer_id, email, referral_code, 'pending', expiration_date]);
+    const insertResult = await runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+    [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+    const user_id = insertResult.insertId;
 
-    // Update the referral information
-    const referralUpdateQuery = 'UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?';
-    const referralUpdateQueryAsync = util.promisify(db.query).bind(db);
-    await referralUpdateQueryAsync(referralUpdateQuery, [invitation_code]);
+    await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
 
-    res.send({ message: 'Account created successfully' });
+    const token = jwt.sign({ userId: user_id }, config.SECRET_KEY);
+
+    res.send({ message: 'Account created successfully', token: token });
   } catch (error) {
     console.error('Error creating account:', error);
     res.status(500).send({ error: 'An error occurred while creating the account' });
   }
 });
 
+function runQuery(query, params) {
+  return new Promise((resolve, reject) => {
+    db.query(query, params, (error, result) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+}
+
 // Route for handling user sign in requests
 app.post("/signin", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
+  let { email, password } = req.body;
 
-  db.query('SELECT * FROM Users WHERE email = ? AND password = ?',
-    [email, password],
-    (err, result) => {
-      if (err) {
-        res.send({ err: err });
-      }
-
-      if (result.length > 0) {
-        res.send(result);
-      } else {
-        res.send({ message: "Account does not exist" });
-      }
-    })
-});
-
-//Route for updating advisor profile
-/*app.post('/editprofile/:userId', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const user = await await fetchUserInfo(userId);
-    const username = req.body.username;
-    const phone_number = req.body.phone_number;
-    const password = req.body.password;
-    const rePassword =  req.body.rePassword;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    if (password != rePassword) {
-      return res.json({error: "Passwords do not match"});
-    }
-    if (!user) {
-      res.send({ message: "Account does not exist" });
-    }
-    const sql = 'UPDATE users SET username = ?, phone_number = ?, password = ? WHERE user_id = ?';
-    const sqlAsync = util.promisify(db.query).bind(db);
-    await sqlAsync(sql, [username,phone_number,hashedPassword,userId]);
-  } catch (error) {
-    res.send({ err: error.message });
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    res.status(400).send({ message: "Invalid email or password format" });
+    return;
   }
-});*/
+
+  db.query('SELECT * FROM Users WHERE email = ?', [email], (err, result) => {
+    if (err) {
+      res.send({ err: err });
+    }
+    if (result.length > 0) {
+      bcrypt.compare(password, result[0].password, (err, isMatch) => {
+        if (err) {
+          res.send({ err: err });
+        }
+        if (isMatch) {
+          
+          jwt.sign({ id: result[0].user_id }, config.SECRET_KEY, (err, token) => {
+            if (err) {
+              res.status(500).json({ error: err });
+            } else {
+              res.json({ token });
+            }
+           });
+          res.send({token: result[0].user_id});
+        } else {
+          res.status(400).send({ message: "Invalid email or password" });
+        }
+      });
+    } else {
+      res.status(500).send({ message: "Invalid email or password" });
+    }
+  });
+});
+ 
+
+/* app.post('/signin', async (req, res) => {
+  const { email, password } = req.body;
+
+  // Inside the '/signin' route
+try {
+  const [rows] = await runQuery('SELECT * FROM Users WHERE email = ?', [email]);
+
+  if (!rows || rows.length === 0) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  const user = rows[0];
+
+  // Compare passwords
+  const passwordMatch = bcrypt.compareSync(password, user.password);
+
+  if (!passwordMatch) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  // Generate JWT token
+  const token = jwt.sign({ userId: user.user_id }, config.SECRET_KEY, { expiresIn: '1h' });
+
+  res.json({ token });
+} catch (error) {
+  console.error('Error signing in:', error);
+  res.status(500).json({ error: 'An error occurred while signing in' });
+}
+
+});
+ */
 
 
 // Route for getting user's homepage
-app.get('/homepage/:userId', async (req, res) => {
+/* app.get('/homepage/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     const user = await fetchUserInfo(userId);
@@ -849,22 +917,55 @@ app.get('/homepage/:userId', async (req, res) => {
 
     if (user) {
       res.json(data);
+      console.log("sending homepage data");
     } else {
       res.send({ message: "Account does not exist" });
     }
   } catch (error) {
     res.send({ err: error.message });
   }
+}); */
+
+app.get('/homepage/:userId', async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Invalid authorization header' });
+  }
+
+  const token = authHeader.split(' ')[1]; // Extract the token part
+  
+  try {
+    const decodedToken = jwt.verify(token, config.SECRET_KEY);
+    const userId = decodedToken.userId;
+
+    // Fetch user data from the database based on userId
+    const user = await getUserById(userId); // Implement the function to retrieve user data
+
+    // Construct and send the response
+    const responseData = {
+      user: user
+      // other relevant data
+    };
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    res.status(401).json({ error: 'Invalid token' });
+  }
 });
 
 // Route for getting portfolio info
-app.get('/portfolio/:portfolioId', async (req, res) => {
+app.get('/portfolio/:userId', async (req, res) => {
   try {
-    const portfolioId = req.params.portfolioId;
+    const userId = req.params.userId;
+    const portfolioId = await fetchCurrentPortfolioId(userId);
     const portfolioValues = await fetchPortfolioValues(portfolioId);
-    const stocks = await fetchStocksInPortfolio(portfolioId)
+    const stocks = await fetchPortfolioStocks(portfolioId);
 
     const data = { portfolioValues, stocks };
+    console.log(data);
+  
 
     if (portfolioId) {
       res.json(data);
@@ -881,7 +982,7 @@ const main = async () => {
 
   // Schedule task to record end of day portfolio values
   var task = cron.schedule('0 17 * * *', async () => {
-    const sql = `UPDATE portfolios SET yesterday_value = portfolio_value`;
+    const sql = `UPDATE Portfolios SET yesterday_value = portfolio_value`;
     try {
       const results = await new Promise((resolve, reject) => {
         db.query(sql, (error, results, fields) => {
@@ -900,8 +1001,11 @@ const main = async () => {
       
   task.start();
 
-  console.log(await(fetchUserInfo(2)));
-  console.log(await(fetchPastGames(2)));
+
+  console.log(await(fetchCurrentPortfolioId(2)));
+
+  // console.log(await(fetchUserInfo(2)));
+  // console.log(await(fetchPastGames(2)));
 
   
   // const symbols = ['AAPL', 'GOOG', 'AMZN']; // add more symbols here
@@ -918,7 +1022,8 @@ const main = async () => {
   // console.log(await(fetchLastSave(4)));
   // console.log(await(validateSave(4)));
 
-  // console.log(await(fetchPortfolioValues(4)));
+  // console.log(await(fetchPortfolioValues(7)));
+  // console.log(await(fetchPortfolioStocks(7)));
 
   // console.log(await(fetchPastPortfolios(1)));
   // console.log(await(fetchGameInfoForPortfolio(1)));
@@ -929,29 +1034,16 @@ const main = async () => {
     113: -4,
     115: 200
   };
+
+  const actionsTicker = {
+    "MMM": -6,
+    "AOS": -4,
+    "ABBV": 200
+  };
   //console.log(await(processActions(7, actions)));
-  console.log(await(fetchCurrentGameUsers(2)));
+  //console.log(await(processActionsTicker(7, actionsTicker)));
+  // console.log(await(fetchCurrentGameUsers(2)));
 
-  //const portfolioId = 5; // Replace with the actual portfolio ID
-  /*
-  const actions = [
-    { type: 'buyShare', stockId: 112, quantity: 0 },
-
-    { type: 'sellShare', stockId: 113, quantity: 0 }
-  ];
-  */
-
-  /*
-  console.log(await(processActions(portfolioId, actions)
-    .then((cashBalance) => {
-      console.log("Final cash balance:", cashBalance);
-      // Handle successful execution
-    })
-    .catch((error) => {
-      console.error("Error:", error.message);
-      // Handle error
-    })));
-    */
 
   const symbols = [];
   fs.createReadStream('constituents.csv')
@@ -976,7 +1068,9 @@ const main = async () => {
 
         if (stockInDB !== null && stockInDB.length > 0) {
           const stockId = stockInDB[0].stock_id;
-          const date = '2023-07-18'; // specify the date for which you want to fetch the market data
+          const currentDate = new Date();
+          const formattedDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+          const date = "2023-08-10"; // specify the date for which you want to fetch the market data
   
           try {
             const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
@@ -1006,8 +1100,160 @@ const main = async () => {
     });
 };
 
+//params required: 
+app.post("/invite-mailto", async (req, res) => {
+  const {first_name, last_name, email} = req.body;
+  //1 is a dummy id for now, shouldn't affect integration testing
+  let mailto = await createInviteEmail(first_name, last_name, email, 1);
+  res.send(mailto);
+});
+
+//shouldn't need the user_id once tokens become available
+const createInviteEmail = async (first_name, last_name, email, user_id) => {
+  let code = generateReferralCode();
+
+  var subject = "Invitation to Field Goal Finance";
+  var body = "Hello " + first_name + " " + last_name + "!\n\nDo you have what it takes to outperform your peers? You have been cordially \
+invited to a unique and exclusive gaming community!\n\n\
+\
+Click here to download the Field Goal Finance app, or go the Apple Store or Andriod Market and download \"FGF\". \
+Your invitation code is " + code + ".\n\n\
+\
+As someone who works in the financial services industry you will have the opportunity to compete against your peers for bragging rights \
+plus a chance to win a prize!\n\n\
+\
+Click the following link to learn more about the game: [INSERT STATIC FAQ PAGE LINK]\n\n\
+\
+Thank you for playing!";
+  var mailtoLink = "mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+
+  //insert the invite to the Referrals table in the database
+  //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
+  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
+  const expiration_date = new Date();
+  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
+  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
+  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
+
+
+  return mailtoLink;
+};
+
+/*
+app.post("/create", (req, res) => {
+  const type = req.body.type;
+  const fund = req.body.fund;
+  const start = req.body.start;
+  const end = req.body.end;
+  const sponsor = req.body.sponsor;
+
+  var createTable = 'INSERT INTO GameInfo (game_id, employee_id, starting_cash, start_date, end_date, sponsor) SELECT ?, employee_id, ?, ?, ?, ? FROM Users'
+  var values = [type, fund, start, end, sponsor];
+
+  db.query(createTable, values,
+    (err, result) => {
+      if (err) {
+        res.send({ err: err });
+      }
+      console.log("Game created.")
+    })
+});
+
+app.post("/changeAdvisorInfo", (req, res) => {
+  let token = req.body.token;
+  let newUsername = req.body.username;
+  let newPhoneNumber = req.body.phone_number;
+  let newPassword = req.body.password;
+
+    let user = await getUserFromToken(token);
+
+    if (user === "false") {
+        res.status(FAILSTATUS);
+        return res.json({error: "Account does not exist"});
+    } 
+
+    if (user === "error") {
+        res.status(ERRORSTATUS);
+        return res.json({error: "Invalid token"});
+    }
+
+    let id = user.employee_id;
+    let newHashedPassword = await bcrypt.hash(newPassword, 10);
+    let sql = `UPDATE Users SET username = ?, phone_number = ?, password = ?  WHERE id = ?`;
+    let values = [newUsername, newPhoneNumber, newHashedPassword, id];
+
+    if (killCreated === "error") {
+        res.status(ERRORSTATUS);
+        return res.json({error: "Something went wrong"});
+    }
+
+    res.status(SUCCESSSTATUS);
+    return res.json({info: newUsername, success: "Changed"});
+});
+
+async function getUserFromToken(token) {
+  try {
+      let decoded = jwt.decode(token, SECRET);
+
+      let user = await getValue("Users", "email", decoded.email);
+
+      if (user === "false") {
+          return "false";
+      }
+
+      let hashedPassword = user[0].password; 
+      let accountExists = await validatePassword(decoded.password, hashedPassword);
+
+      if (accountExists === "true") {
+          return user[0];
+      }
+
+      return "false";
+
+  } catch (err) {
+      return "error";
+  }
+};
+
+async function getValue(table, category, value) {
+  let text = `SELECT * FROM ${table} WHERE ${category} = $1`;
+  let values = [value];
+
+  try {
+      const res = await pool.query(text, values);
+      
+      if (res.rows.length > 0) {
+          return res.rows;
+      }
+
+      return "false";
+
+  } catch (err) {
+      console.log(err.stack);
+      return "error";
+  } 
+}
+
+
+async function validatePassword(password, hashedPassword) {
+  try {
+      const res = await bcrypt.compare(password, hashedPassword);
+      
+      if (res) {
+          return "true";
+      }
+
+      return "false";
+
+  } catch (err) {
+      console.log(err.stack);
+      return "error";
+  }
+};
+*/
+
 app.listen(3001, () => {
-   console.log("local host server running")
+  console.log("local host server running")
 });
 
 main();
