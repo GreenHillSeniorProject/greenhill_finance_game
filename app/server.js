@@ -236,6 +236,16 @@ const processActionsTicker = async (portfolioId, actions) => {
   }
 };
 
+//Function to populate actions list
+const addAction = async (stock_id, quantity, actions) => {
+  try {
+    actions[stock_id] += quantity;
+    return actions;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Function to get timestamp of last portfolio save
 const fetchLastSave = async (portfolioId) => {
   const sql = 'SELECT last_save FROM Portfolios WHERE portfolio_id = ?';
@@ -666,7 +676,7 @@ const fetchUserInfo = async (userId) => {
 
 //Function to calculate day delta
 const fetchDayDelta = async (userId, portfolio_id) => {
-  const sql = 'SELECT portfolio_value-yesterday_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
+  const sql = 'SELECT (portfolio_value - yesterday_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
   const values = [userId,userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -680,7 +690,7 @@ const fetchDayDelta = async (userId, portfolio_id) => {
 
 //Function to calculate week delta
 const fetchWeekDelta = async (userId, portfolio_id) => {
-  const sql = 'SELECT portfolio_value-last_week_value FROM portfolios WHERE game_id = (SELECT current_game WHERE user_id = ?) and user_id = ?';
+  const sql = 'SELECT (portfolio_value - last_week_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
   const values = [userId,userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -694,7 +704,7 @@ const fetchWeekDelta = async (userId, portfolio_id) => {
 
 //Function to calculate average rank
 const fetchAveRanking =  async (userId) => {
-  const sql = 'SELECT AVG(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM portfolios ORDER BY game_id) ranking_table WHERE user_id = ?';
+  const sql = 'SELECT AVG(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -708,7 +718,7 @@ const fetchAveRanking =  async (userId) => {
 
 //Function to calculate # of 1st rank games
 const fetchNumber1stRankedGames =  async (userId) => {
-  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
   const values = [1, userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -722,7 +732,7 @@ const fetchNumber1stRankedGames =  async (userId) => {
 
 //Function to calculate # of 2nd rank games
 const fetchNumber2ndRankedGames =  async (userId) => {
-  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
   const values = [2, userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -736,7 +746,7 @@ const fetchNumber2ndRankedGames =  async (userId) => {
 
 //Function to calculate # of 3rd rank games
 const fetchNumber3rdRankedGames =  async (userId) => {
-  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
   const values = [3, userId];
   const query = util.promisify(db.query).bind(db);
 
