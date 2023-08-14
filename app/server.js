@@ -730,7 +730,7 @@ function runQuery(query, params) {
 }
 
 // Route for handling user sign in requests
-/* app.post("/signin", (req, res) => {
+app.post("/signin", (req, res) => {
   let { email, password } = req.body;
 
   if (typeof email !== 'string' || typeof password !== 'string') {
@@ -748,13 +748,14 @@ function runQuery(query, params) {
           res.send({ err: err });
         }
         if (isMatch) {
-          // jwt.sign({ id: result[0].user_id }, SECRET_KEY, (err, token) => {
-          //   if (err) {
-          //     res.send({ error: err });
-          //   } else {
-          //     res.json({ token: result[0].user_id });
-          //   }
-          // });
+          
+          jwt.sign({ id: result[0].user_id }, config.SECRET_KEY, (err, token) => {
+            if (err) {
+              res.status(500).json({ error: err });
+            } else {
+              res.json({ token });
+            }
+           });
           res.send({token: result[0].user_id});
         } else {
           res.status(400).send({ message: "Invalid email or password" });
@@ -765,42 +766,39 @@ function runQuery(query, params) {
     }
   });
 });
- */
+ 
 
-app.post('/signin', async (req, res) => {
+/* app.post('/signin', async (req, res) => {
   const { email, password } = req.body;
 
-  try {
-    // Retrieve user from the database
-    const [rows] = await runQuery('SELECT * FROM users WHERE email = ?', [email]);
+  // Inside the '/signin' route
+try {
+  const [rows] = await runQuery('SELECT * FROM Users WHERE email = ?', [email]);
 
-    if (!rows || rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    const user = rows[0];
-
-    // Compare passwords
-    if (!user.password) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-
-    if (!passwordMatch) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ userId: user.id }, config.SECRET_KEY, { expiresIn: '1h' });
-
-    res.json({ token });
-  } catch (error) {
-    console.error('Error signing in:', error);
-    res.status(500).json({ error: 'An error occurred while signing in' });
+  if (!rows || rows.length === 0) {
+    return res.status(401).json({ error: 'Invalid email or password' });
   }
-});
 
+  const user = rows[0];
+
+  // Compare passwords
+  const passwordMatch = bcrypt.compareSync(password, user.password);
+
+  if (!passwordMatch) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  // Generate JWT token
+  const token = jwt.sign({ userId: user.user_id }, config.SECRET_KEY, { expiresIn: '1h' });
+
+  res.json({ token });
+} catch (error) {
+  console.error('Error signing in:', error);
+  res.status(500).json({ error: 'An error occurred while signing in' });
+}
+
+});
+ */
 
 
 // Route for getting user's homepage
