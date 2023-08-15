@@ -76,6 +76,27 @@ const getStockInfo = async (symbol) => {
     return null;
   }
 };
+// TODO: FUNCTION TO UPDATE PORTFOLIO
+app.post('/update-portfolio', async (req, res) => {
+  const portfolioData = req.body;
+
+  // Validate the incoming data as required
+  // TODO: Add data validation logic here
+
+  try {
+    // Create or update the portfolio data in  DB
+    // This is a placeholder; ineed to adjust the SQL and logic based on THE DB schema 
+    const sql = 'UPDATE YourPortfolioTable SET column1=?, column2=? WHERE userId=?'; 
+    const values = [portfolioData.column1, portfolioData.column2, portfolioData.userId];
+
+    const result = await util.promisify(db.query).bind(db)(sql, values);
+
+    res.json({ success: true, message: 'Portfolio updated successfully!' });
+  } catch (error) {
+    console.error('Error updating portfolio:', error);
+    res.status(500).json({ success: false, message: 'Error updating portfolio' });
+  }
+});
 
 // Create a variable to track the delay between requests
 const delay = 5 * 60 * 1000; // 5 minutes
