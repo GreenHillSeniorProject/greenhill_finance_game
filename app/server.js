@@ -28,6 +28,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Define invalidatedTokens at the global scope
+const invalidatedTokens = new Set();
+
 // Create MySQL database connection
 const db = mysql.createConnection({
   user: "root",
