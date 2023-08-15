@@ -631,9 +631,6 @@ const fetchCurrentPortfolioId = async (userId) => {
   }
 };
 
-
-
-
 // Function to fetch current game users in order of highest portfolio value
 const fetchCurrentGameUsers = async (userId) => {
   try {
@@ -763,7 +760,8 @@ const fetchNumber3rdRankedGames =  async (userId) => {
 
 const getTokenFromUserId = (userId) => {
   return new Promise((resolve, reject) => {
-    jwt.sign(userId.toString(), SECRET_KEY, (err, token) => {
+    const payload = { userId }; // Create a payload object
+    jwt.sign(payload, SECRET_KEY, (err, token) => {
       if (err) {
         return reject(err);
       }
@@ -773,18 +771,20 @@ const getTokenFromUserId = (userId) => {
 };
 
 const getUserIdFromToken = (token) => {
-  console.log("in get user id", token);
   return new Promise((resolve, reject) => {
     jwt.verify(token.toString(), SECRET_KEY, (err, payload) => {
       if (err) {
         console.log('in get user id error');
         return reject(err);
       }
-      console.log('in get user id resolve', payload);
-      resolve(payload);
+
+      const userId = payload.userId; // Extract userId directly from payload
+      resolve(userId);
     });
   });
 };
+
+
 
 
 // Function to generate a new referral code
@@ -806,7 +806,7 @@ function generateReferralCode() {
 // Define the function to get user data by ID
 const getUserById = async (userId) => {
   try {
-    const [rows] = await db.promise().execute('SELECT * FROM users WHERE user_id = ?', [userId]);
+    const [rows] = await db.promise().execute('SELECT * FROM Users WHERE user_id = ?', [userId]);
     if (rows && rows.length > 0) {
       return rows[0];
     }
@@ -1021,17 +1021,23 @@ app.get('/protected/data', (req, res) => {
   res.status(200).json({ message: 'Protected data accessed successfully' });
 });
 
-// Route for getting portfolio info
-app.get('/protected/portfolio', async (req, res) => {
+app.get('/portfolio', async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const token = req.headers.authorization.split(' ')[1];
+    console.log('Token:', token); // Debugging
+    const userId = await getUserIdFromToken(token);
+    // Fetch user data from the database based on userId
+    const user = await getUserById(userId);
+    console.log('User ID:', user); // Debugging
+
     const portfolioId = await fetchCurrentPortfolioId(userId);
+    console.log('Portfolio ID:', portfolioId); // Debugging
+
     const portfolioValues = await fetchPortfolioValues(portfolioId);
     const stocks = await fetchPortfolioStocks(portfolioId);
 
     const data = { portfolioValues, stocks };
     console.log(data);
-  
 
     if (portfolioId) {
       res.json(data);
@@ -1042,6 +1048,8 @@ app.get('/protected/portfolio', async (req, res) => {
     res.send({ err: error.message });
   }
 });
+
+
 
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
