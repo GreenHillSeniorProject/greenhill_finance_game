@@ -654,22 +654,6 @@ const fetchUserInfo = async (userId) => {
   }
 };
 
-// Function to generate a new referral code
-function generateReferralCode() {
-  // Generate a unique referral code according to your requirements
-  // For example, you can use a combination of letters and numbers
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const referralCodeLength = 8;
-  let referralCode = '';
-
-  for (let i = 0; i < referralCodeLength; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    referralCode += characters[randomIndex];
-  }
-
-  return referralCode;
-}
-
 // Define the function to get user data by ID
 const getUserById = async (userId) => {
   try {

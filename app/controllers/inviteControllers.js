@@ -1,6 +1,10 @@
+let util = require('util');
+
 //bracket notation [] only used because of the dash in the route
 exports["invite-mailto"] = async (req, res) => {
-  const authHeader = req.headers.Authorization;
+
+  const authHeader = req.headers.authorization;
+  console.log(authHeader);
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Invalid authorization header' });
@@ -45,3 +49,18 @@ Thank you for playing!";
 
   return mailtoLink;
 };
+
+function generateReferralCode() {
+  // Generate a unique referral code according to your requirements
+  // For example, you can use a combination of letters and numbers
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const referralCodeLength = 8;
+  let referralCode = '';
+
+  for (let i = 0; i < referralCodeLength; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    referralCode += characters[randomIndex];
+  }
+
+  return referralCode;
+}
