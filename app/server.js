@@ -1022,7 +1022,7 @@ app.get('/protected/data', (req, res) => {
 });
 
 // Route for getting portfolio info
-app.get('/portfolio/:userId', async (req, res) => {
+app.get('/protected/portfolio', async (req, res) => {
   try {
     const userId = req.params.userId;
     const portfolioId = await fetchCurrentPortfolioId(userId);
