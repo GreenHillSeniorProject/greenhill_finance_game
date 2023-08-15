@@ -1,10 +1,11 @@
 let util = require('util');
+let db = require('./dbController');
 
 //bracket notation [] only used because of the dash in the route
 exports["invite-mailto"] = async (req, res) => {
 
   const authHeader = req.headers.authorization;
-  console.log(authHeader);
+  console.log("token", authHeader);
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Invalid authorization header' });
