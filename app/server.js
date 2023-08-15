@@ -675,7 +675,7 @@ const fetchUserInfo = async (userId) => {
 };
 
 //Function to calculate day delta
-const fetchDayDelta = async (userId, portfolio_id) => {
+const fetchDayDelta = async (userId) => {
   const sql = 'SELECT (portfolio_value - yesterday_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
   const values = [userId,userId];
   const query = util.promisify(db.query).bind(db);
@@ -689,7 +689,7 @@ const fetchDayDelta = async (userId, portfolio_id) => {
 };
 
 //Function to calculate week delta
-const fetchWeekDelta = async (userId, portfolio_id) => {
+const fetchWeekDelta = async (userId) => {
   const sql = 'SELECT (portfolio_value - last_week_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
   const values = [userId,userId];
   const query = util.promisify(db.query).bind(db);
