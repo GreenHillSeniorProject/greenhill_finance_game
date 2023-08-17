@@ -31,6 +31,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Define invalidatedTokens at the global scope
+const invalidatedTokens = new Set();
+
 // Create MySQL database connection
 const db = mysql.createConnection({
   user: "root",
@@ -51,6 +54,19 @@ app.get('/faq', (req, res) => {
     };
   });
 });
+
+/* app.post('/faq/add', (req, res) => {
+  try {
+  const question = req.body.question;
+  const answer = req.body.answer;
+  var sql = 'INSERT INTO faq (question, answer, date_created) VALUES (?,?,now())';
+  const values = [question, answer];
+  const sqlAsync = util.promisify(db.query).bind(db);
+  await sqlAsync(sql, [username,phone_number,hashedPassword,userId]);
+  } catch (error) {
+    res.send({ err: error.message });
+  }
+}); */
 
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
@@ -221,6 +237,16 @@ const processActionsTicker = async (portfolioId, actions) => {
     console.log(cashBalance);
 
     return cashBalance;
+  } catch (error) {
+    throw error;
+  }
+};
+
+//Function to populate actions list
+const addAction = async (stock_id, quantity, actions) => {
+  try {
+    actions[stock_id] += quantity;
+    return actions;
   } catch (error) {
     throw error;
   }
@@ -608,9 +634,6 @@ const fetchCurrentPortfolioId = async (userId) => {
   }
 };
 
-
-
-
 // Function to fetch current game users in order of highest portfolio value
 const fetchCurrentGameUsers = async (userId) => {
   try {
@@ -654,10 +677,139 @@ const fetchUserInfo = async (userId) => {
   }
 };
 
+//Function to calculate day delta
+const fetchDayDelta = async (userId, portfolio_id) => {
+  const sql = 'SELECT (portfolio_value - yesterday_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
+//Function to calculate week delta
+const fetchWeekDelta = async (userId, portfolio_id) => {
+  const sql = 'SELECT (portfolio_value - last_week_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
+//Function to calculate average rank
+const fetchAveRanking =  async (userId) => {
+  const sql = 'SELECT AVG(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  } 
+};
+
+//Function to calculate # of 1st rank games
+const fetchNumber1stRankedGames =  async (userId) => {
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [1, userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  } 
+};
+
+//Function to calculate # of 2nd rank games
+const fetchNumber2ndRankedGames =  async (userId) => {
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [2, userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  } 
+};
+
+//Function to calculate # of 3rd rank games
+const fetchNumber3rdRankedGames =  async (userId) => {
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [3, userId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  } 
+};
+
+const getTokenFromUserId = (userId) => {
+  return new Promise((resolve, reject) => {
+    const payload = { userId }; // Create a payload object
+    jwt.sign(payload, SECRET_KEY, (err, token) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(token);
+    });
+  });
+};
+
+const getUserIdFromToken = (token) => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token.toString(), SECRET_KEY, (err, payload) => {
+      if (err) {
+        console.log('in get user id error');
+        return reject(err);
+      }
+
+      const userId = payload.userId; // Extract userId directly from payload
+      resolve(userId);
+    });
+  });
+};
+
+
+
+
+// Function to generate a new referral code
+function generateReferralCode() {
+  // Generate a unique referral code according to your requirements
+  // For example, you can use a combination of letters and numbers
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const referralCodeLength = 8;
+  let referralCode = '';
+
+  for (let i = 0; i < referralCodeLength; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    referralCode += characters[randomIndex];
+  }
+
+  return referralCode;
+}
+
 // Define the function to get user data by ID
 const getUserById = async (userId) => {
   try {
-    const [rows] = await db.promise().execute('SELECT * FROM users WHERE user_id = ?', [userId]);
+    const [rows] = await db.promise().execute('SELECT * FROM Users WHERE user_id = ?', [userId]);
     if (rows && rows.length > 0) {
       return rows[0];
     }
@@ -717,7 +869,7 @@ function runQuery(query, params) {
 }
 
 // Route for handling user sign in requests
-app.post("/signin", (req, res) => {
+app.post("/signin", async (req, res) => {
   let { email, password } = req.body;
 
   if (typeof email !== 'string' || typeof password !== 'string') {
@@ -730,20 +882,13 @@ app.post("/signin", (req, res) => {
       res.send({ err: err });
     }
     if (result.length > 0) {
-      bcrypt.compare(password, result[0].password, (err, isMatch) => {
+      bcrypt.compare(password, result[0].password, async (err, isMatch) => {
         if (err) {
           res.send({ err: err });
         }
         if (isMatch) {
-          
-          jwt.sign({ id: result[0].user_id }, config.SECRET_KEY, (err, token) => {
-            if (err) {
-              res.status(500).json({ error: err });
-            } else {
-              res.json({ token });
-            }
-           });
-          res.send({token: result[0].user_id});
+          const token = await getTokenFromUserId(result[0].user_id);
+          res.send({token});
         } else {
           res.status(400).send({ message: "Invalid email or password" });
         }
@@ -795,8 +940,14 @@ try {
     const user = await fetchUserInfo(userId);
     const currGameUsers = await fetchCurrentGameUsers(userId);
     const pastGames = await fetchPastGames(userId);
+    const dayDelta = await fetchDayDelta(userId);
+    const weekDelta = await fetchWeekDelta (userId);
+    const avgRank = await fetchAveRanking(userId);
+    const no1stRank = await fetchNumber1stRankedGames(userId);
+    const no2ndRank = await fetchNumber2ndRankedGames(userId);
+    const no3rdRank = await fetchNumber3rdRankedGames(userId);
 
-    const data = { user, currGameUsers, pastGames};
+    const data = { user, currGameUsers, pastGames, avgRank, no1stRank, no2ndRank, no3rdRank};
 
     if (user) {
       res.json(data);
@@ -809,7 +960,7 @@ try {
   }
 }); */
 
-app.get('/homepage/:userId', async (req, res) => {
+app.get('/homepage', async (req, res) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -819,15 +970,18 @@ app.get('/homepage/:userId', async (req, res) => {
   const token = authHeader.split(' ')[1]; // Extract the token part
   
   try {
-    const decodedToken = jwt.verify(token, config.SECRET_KEY);
-    const userId = decodedToken.userId;
+    const userId = await getUserIdFromToken(token);
 
     // Fetch user data from the database based on userId
     const user = await getUserById(userId); // Implement the function to retrieve user data
+    const currGameUsers = await fetchCurrentGameUsers(userId);
+    const pastGames = await fetchPastGames(userId);
 
     // Construct and send the response
     const responseData = {
-      user: user
+      user: user,
+      currGameUsers: currGameUsers,
+      pastGames: pastGames
       // other relevant data
     };
 
@@ -838,17 +992,55 @@ app.get('/homepage/:userId', async (req, res) => {
   }
 });
 
-// Route for getting portfolio info
-app.get('/portfolio/:userId', async (req, res) => {
+app.post('/logout', (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ message: 'Token is missing in request' });
+  }
+
+  // Add the token to the invalidatedTokens blacklist
+  invalidatedTokens.add(token);
+
+  // TODO: You could also persist the blacklist in a file or database for better durability
+
+  res.status(200).json({ message: 'Logout successful' });
+});
+
+// Middleware to verify token on protected routes
+app.use('/protected', (req, res, next) => {
+  const { token } = req.headers;
+
+  if (!token || invalidatedTokens.has(token)) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  // Continue with the next middleware if the token is valid
+  next();
+});
+
+// Protected route example
+app.get('/protected/data', (req, res) => {
+  res.status(200).json({ message: 'Protected data accessed successfully' });
+});
+
+app.get('/portfolio', async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const token = req.headers.authorization.split(' ')[1];
+    console.log('Token:', token); // Debugging
+    const userId = await getUserIdFromToken(token);
+    // Fetch user data from the database based on userId
+    const user = await getUserById(userId);
+    console.log('User ID:', user); // Debugging
+
     const portfolioId = await fetchCurrentPortfolioId(userId);
+    console.log('Portfolio ID:', portfolioId); // Debugging
+
     const portfolioValues = await fetchPortfolioValues(portfolioId);
     const stocks = await fetchPortfolioStocks(portfolioId);
 
     const data = { portfolioValues, stocks };
     console.log(data);
-  
 
     if (portfolioId) {
       res.json(data);
@@ -859,6 +1051,8 @@ app.get('/portfolio/:userId', async (req, res) => {
     res.send({ err: error.message });
   }
 });
+
+
 
 // Main function to fetch stock info for multiple symbols and insert into database using Polygon API
 const main = async () => {
