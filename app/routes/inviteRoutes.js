@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
 let util = require('util');
-let db = require('./dbController');
+let db = require('../controllers/dbController');
+let jwtCTLR = require('../controllers/tokenController');
 
 //bracket notation [] only used because of the dash in the route
-exports["invite-mailto"] = async (req, res) => {
+let invite_mailto = async (req, res) => {
 
+  console.log(req.headers);
   const authHeader = req.headers.authorization;
   console.log("token", authHeader);
 
@@ -23,9 +25,9 @@ exports["invite-mailto"] = async (req, res) => {
 };
 
 //shouldn't need the user_id once tokens become available
-const createInviteEmail = async (first_name, last_name, email, user_id) => {
+const createInviteEmail = async (first_name, last_name, email, token) => {
   let code = generateReferralCode();
-
+  let user_id = jwtCTLR.getIdFromToken(token);
   var subject = "Invitation to Field Goal Finance";
   var body = "Hello " + first_name + " " + last_name + "!\n\nDo you have what it takes to outperform your peers? You have been cordially \
 invited to a unique and exclusive gaming community!\n\n\
@@ -68,6 +70,6 @@ function generateReferralCode() {
   return referralCode;
 }
 
-router.post('/invite-mailto', userController["invite-mailto"]);
+router.post('/invite-mailto', invite_mailto);
 
 module.exports = router;
