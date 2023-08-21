@@ -6,7 +6,7 @@ let db = dbCTLR.db;
 let jwtCTLR = require('../controllers/tokenController');
 
 //bracket notation [] only used because of the dash in the route
-let invite_mailto = async (req, res) => {
+let invite_mailto_main = async (req, res) => {
 
   const authHeader = req.headers.authorization;
 
@@ -75,6 +75,6 @@ function generateReferralCode() {
   return referralCode;
 }
 
-router.post('/invite-mailto', invite_mailto);
+router.post('/invite-mailto', invite_mailto_main);
 
 module.exports = router;
