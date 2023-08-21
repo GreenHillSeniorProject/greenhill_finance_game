@@ -369,7 +369,7 @@ const fetchPortfolioValues = async (portfolioId) => {
 };
 
 const fetchPortfolioStocks = async (portfolioId) => {
-  const sql = 'SELECT * FROM PortfolioStock p JOIN Stocks s on s.stock_id = p.stock_id WHERE portfolio_id = ?'
+  const sql = 'SELECT * FROM PortfolioStock p JOIN Stocks s on s.stock_id = p.stock_id JOIN StockHistory sh on sh.stock_id = s.stock_id WHERE portfolio_id = ?'
   const values = [portfolioId];
   const query = util.promisify(db.query).bind(db);
 
@@ -1077,6 +1077,7 @@ const main = async () => {
 
 
   console.log(await(fetchCurrentPortfolioId(2)));
+  console.log(await(fetchPortfolioStocks(7)));
 
   // console.log(await(fetchUserInfo(2)));
   // console.log(await(fetchPastGames(2)));
