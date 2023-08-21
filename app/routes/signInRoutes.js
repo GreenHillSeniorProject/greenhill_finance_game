@@ -1,17 +1,12 @@
 const express = require('express');
 const router = express.Router();
-//unused variable
-// let util = require('util');
 const bcrypt = require('bcrypt');
 let dbCTLR = require('../controllers/dbController');
 let db = dbCTLR.db;
-//unused variable
 let jwtCTLR = require('../controllers/tokenController');
 
 let signIn_main = async (req, res) => {
 	let { email, password } = req.body;
-
-	console.log("request recieved");
 
   if (typeof email !== 'string' || typeof password !== 'string') {
 	res.status(400).send({ message: "Invalid email or password format" });
