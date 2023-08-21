@@ -1,0 +1,29 @@
+/* Apply Inter font family to table */
+table {
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+  color: white;
+  text-align: center;
+  border-collapse: collapse; /* Makes the borders collapse into single lines */
+}
+
+/* Header styles */
+table thead {
+  background-color: darkblue;
+}
+
+/* Row styles */
+table tbody tr {
+  background-color: darkgreen; /* Changing background color to dark green */
+}
+
+/* Cell styles */
+table td, table th {
+  border: 1px solid black; /* Adding black border to cells */
+}
+
+/* Styles for image in the cell. TODO: Adjust for double fatter size */
+table tbody tr td img {
+  width: 50px; /* Dynamic? */
+  height: auto;
+}

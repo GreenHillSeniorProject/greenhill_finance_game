@@ -1,0 +1,110 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Josefin Sans', sans-serif;
+}
+
+.advisor-registration {
+  padding: 20px;
+  color: white;
+  background-color: #1b3c35;
+  min-height: 100vh; 
+  font-family: 'Josefin Sans', sans-serif;
+
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Josefin Sans', sans-serif;
+
+}
+
+.menu {
+  font-size: 2.5rem;
+  margin-right: 20px;
+}
+
+.advisor-registration h1 {
+  color: white;
+  text-align: center;
+  font-family: 'Josefin Sans', sans-serif;
+
+}
+
+.invite-text {
+  color: #90ae7c;
+  font-size: 4em;
+  text-align: center;
+  font-family: 'Josefin Sans', sans-serif;
+}
+
+.invite-text span {
+  color: white;
+  font-family: 'Josefin Sans', sans-serif;
+
+}
+
+.description {
+  color: white;
+  text-align: center;
+  font-size: 1.5em;
+  font-family: 'Josefin Sans', sans-serif;
+
+}
+
+.advisor-registration input, .advisor-registration button {
+  display: block;
+  margin: 10px auto;
+  width: 300px;
+  font-size: 20px;
+  border-radius: 10px;
+  padding: 10px 10px;
+  min-height: 40px;
+  font-family: 'Josefin Sans', sans-serif;
+
+}
+
+.advisor-registration input {
+  border: 1px solid white;
+  color: black;
+  font-family: 'Josefin Sans', sans-serif;
+
+}
+
+.generate-button {
+  background-color: #90ae7c;
+  border: none;
+  color: white;
+  margin-top: 50px; 
+  font-family: 'Josefin Sans', sans-serif;
+  cursor: pointer;
+
+}
+
+.stop-button {
+  background-color: red;
+  border: none;
+  color: white;
+  font-family: 'Josefin Sans', sans-serif;
+  cursor: pointer;
+
+
+}
+@media (max-width: 768px) {
+  .invite-text {
+    font-size: 2em;
+  }
+
+  .description {
+    font-size: 1em;
+  }
+
+  .advisor-registration input, .advisor-registration button {
+    font-size: 16px;
+    padding: 5px 5px;
+    min-height: 30px;
+  }
+}

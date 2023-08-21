@@ -1,0 +1,57 @@
+.admin-home {
+  background-color:#1b3c35;
+  color: white;
+  font-family: 'Josefin Sans' sans-serif;
+  height: 100vh;
+  padding: 20px;
+}
+
+.admin-home h1 {
+  text-align: center;
+  font-size: 3em;
+}
+
+.admin-home .green {
+  color: #90ae7c;
+}
+
+.admin-home .white {
+  color: white;
+}
+
+.admin-home .tiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.admin-home .tile {
+  width: 30%;
+  height: 200px;
+  margin: 10px;
+  background-color: lightgrey;
+  color: black;
+  cursor: pointer;
+  transition: transform 0.3s;
+  border-radius: 10px;
+}
+
+.admin-home .tile:hover {
+  transform: scale(1.05);
+}
+
+.admin-home .tile-title {
+  background-color: #90ae7c;
+  text-align: center;
+  font-weight: 700;
+  color: white;
+  padding: 10px;
+  border-radius: 10px 10px 0px 0px;
+}
+
+.admin-home .tile-content {
+  font-size: 24px;
+  text-align: center;
+  padding: 20px;
+  font-weight: 500;
+}

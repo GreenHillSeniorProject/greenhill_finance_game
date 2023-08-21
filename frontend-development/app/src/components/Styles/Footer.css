@@ -1,0 +1,68 @@
+.footer-container {
+  background-color: #1b3c35;
+  color: white;
+  padding: 20px 0;
+  position: relative;
+}
+
+.footer-section {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+.footer-logo-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.footer-logo {
+  width: 15%;
+  height: 10%;
+  margin-right: 10px;
+}
+
+.footer-section h5 {
+  margin-bottom: 10px;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-section a {
+  color: white;
+  text-decoration: none;
+}
+
+.issue-input {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.submit-button {
+  background-color: orange;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+}
+
+.container {
+  position: relative;
+}
+
+.row {
+  position: relative;
+}
+
+.col {
+  position: relative;
+}
+
+.footer-container .copyright {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+}

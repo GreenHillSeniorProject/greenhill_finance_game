@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <title>GreenHill's Greenify</title>
+</head>
+<body>
+    <h1>Greenify Advisor Signup</h1>
+    <form action="/user/createAdvisor" method="post">
+        <!-- first name -->
+        <label for="first_name">First name:</label>
+        <input name="first_name" type="text" id="first_name" required><br><br>
+        <!-- last name -->
+        <label for="last_name">Last name:</label>
+        <input name="last_name" type="text" id="last_name" required><br><br>
+        <!-- username -->
+        <label for="username">User name:</label>
+        <input name="username" type="text" id="username" requiede><br><br>
+        <!-- email -->
+        <label for="email">Email:</label>
+        <input name="email" type="email" id="email" required><br><br>
+        <!-- password -->
+        <label for="password">Password:</label>
+        <input name="password" type="password" id="password" min="8" required><br><br>
+        <!-- submit -->
+        <button type="submit">Submit</button>
+    </form>
+
+    <h1>Current Greenhill Advisors</h1>
+      <ul id="advisor-list"></ul>
+      <script>
+        fetch('/select')
+            .then(response => response.json())
+            .then(advisors => {
+                const adminList = document.getElementById('advisor-list');
+                advisors.forEach(advisor => {
+                    const li = document.createElement('li');
+                    const boldName = document.createElement('b');
+                    boldName.textContent = 'Name: ';
+                    const name = document.createTextNode(advisor.first_name + ' ' + advisor.last_name);
+                    const boldEmail = document.createElement('b');
+                    boldEmail.textContent = ' Email: ';
+                    const email = document.createTextNode(advisor.email);
+                    const boldUsername = document.createElement('b');
+                    boldUsername.textContent = ' Username: ';
+                    const username = document.createTextNode(advisor.username);
+                    li.appendChild(boldName);
+                    li.appendChild(name);
+                    li.appendChild(document.createElement('br'));
+                    li.appendChild(boldEmail);
+                    li.appendChild(email);
+                    li.appendChild(document.createElement('br'));
+                    li.appendChild(boldUsername);
+                    li.appendChild(username);
+                    li.appendChild(document.createElement('br'));
+                    li.appendChild(document.createElement('br'));
+                    adminList.appendChild(li);
+                });
+            })
+            .catch(error => console.error(error));
+      </script>
+
+
+      <h1>Delete an advisor</h1>
+      <form action="/delete" method="post">
+        <label for="advisor">Select an advisor:</label>
+        <select name="advisor_id" id="advisor">
+          <!-- populate the dropdown with the current advisors -->
+          <script>
+            fetch('/select')
+              .then(response => response.json())
+              .then(advisors => {
+                const select = document.getElementById('advisor');
+                advisors.forEach(advisor => {
+                  const option = document.createElement('option');
+                  option.value = advisor.advisor_id;
+                  option.text = `${advisor.first_name} ${advisor.last_name}`;
+                  select.add(option);
+                });
+              });
+          </script>
+        </select>
+        <button type="submit">Delete advisor</button>
+      </form>
+
+      <script>
+        // populate the advisor list on page load
+        const advisorList = document.getElementById('advisor');
+        fetch('/select')
+          .then(response => response.json())
+          .then(advisors => {
+            advisors.forEach(advisor => {
+              const li = document.createElement('li');
+              li.textContent = `${advisor.first_name} ${advisor.last_name}`;
+              advisorList.appendChild(li);
+            });
+          });
+      </script>
+
+
+</body>
+</html>

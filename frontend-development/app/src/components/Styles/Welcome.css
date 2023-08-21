@@ -1,0 +1,88 @@
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #1b3c35;
+}
+a {
+  text-decoration: none;
+}
+
+.greenify {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 70px;
+}
+
+.green {
+  color: #90ae7c;
+}
+
+.ify {
+  color: #ffffff;
+}
+
+.welcome-text {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 48px;
+  color: #ffffff;
+  margin-bottom: 30px;
+}
+
+.buttons-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.welcome-button {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 20px;
+  color: #ffffff;
+  background-color: #90ae7c;
+  border: none;
+  padding: 12px 24px;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+.presented-by {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 36px;
+  color: #90ae7c;
+  margin-top: 30px;
+  margin-bottom: 20px;
+}
+
+.images-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  max-width: 600px;
+  margin-bottom: 20px;
+}
+
+.image {
+  width: 100%;
+  max-width: 287px;
+  height: auto;
+  object-fit: contain;
+  margin: 10px;
+}
+
+/* Responsive styles for smaller screens */
+@media (max-width: 700px) {
+  .greenify {
+    font-size: 40px;
+  }
+
+  .welcome-text {
+    font-size: 36px;
+  }
+
+  .presented-by {
+    font-size: 24px;
+  }
+}

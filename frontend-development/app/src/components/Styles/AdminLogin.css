@@ -1,0 +1,104 @@
+.form-container {
+  display: flex;
+  justify-content: center;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.admin-login {
+  position: relative;
+  width: 500px;
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+  border-radius: 10px;
+  background-color: #90ae7c;
+  color: white;
+  font-family: 'Josefin Sans', sans-serif;
+  padding: 20px;
+}
+
+.admin-login .form-title {
+  text-align: center;
+  font-size: 48px;
+}
+
+.form {
+  flex-direction: column;
+  align-items: left;
+}
+
+.form:focus
+{
+  outline-width: 10px;
+  outline-color: #1b3c35;
+}
+
+.admin-login input,
+.admin-login button {
+  border-color: transparent;
+  border-radius: 10px;
+  margin: 10px;
+  padding: 10px;
+}
+
+.admin-login span{
+  color:#90ae7c;
+}
+
+.admin-login .checkbox-container {
+  display: flex;
+  align-items: center;
+}
+
+.admin-login .checkbox-container a {
+  color: lightgreen;
+  margin-left: 10px;
+}
+
+.forgot-password
+{
+  margin-bottom: 10px;
+}
+
+.forgot-password-link:link
+{
+  color: white;
+  font-size: 20px;
+}
+
+.forgot-password-link:hover
+{
+  color: #1b3c35;
+}
+
+.forgot-password-link:visited
+{
+  color:#1b3c35;
+}
+
+.admin-login button[type="submit"] {
+  background-color: #1b3c35;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  display: block;
+  font-size: 20px;
+  margin: 10px auto;
+  min-height: 40px;
+  min-width: 100px;
+  padding: 10px 10px;
+}
+
+.admin-login button:hover
+{
+  opacity: 90%;
+  color:#90ae7c;
+}
+
+.admin-login button:active
+{
+  color: white;
+}

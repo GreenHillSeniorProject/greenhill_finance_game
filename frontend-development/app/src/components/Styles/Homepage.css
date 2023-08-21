@@ -1,0 +1,32 @@
+.homepage {
+  background-color: darkgreen;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  padding: 20px;
+}
+
+.homepage h1 {
+  text-align: left;
+  font-size: 3em;
+}
+
+.homepage p {
+  text-align: left;
+  font-size: 1em;
+}
+
+.delta-container {
+  background-color: grey;
+  color: white;
+  text-align: center;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.lime {
+  color: lime;
+}
+
+.component-margin {
+  margin: 10px;
+}

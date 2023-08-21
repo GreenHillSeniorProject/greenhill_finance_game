@@ -1,0 +1,8 @@
+ALTER TABLE GreenhillEmployee 
+MODIFY COLUMN date_created DATE NOT NULL DEFAULT (CURRENT_DATE);
+
+ALTER TABLE GreenhillEmployee
+ADD COLUMN middle_name VARCHAR(45) NULL;
+
+ALTER TABLE FinancialAdvisors 
+MODIFY COLUMN date_created DATE NOT NULL DEFAULT (CURRENT_DATE);

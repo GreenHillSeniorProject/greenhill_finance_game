@@ -1,0 +1,31 @@
+.stock-search {
+    position: relative;
+    width: 200px;
+  }
+  
+  .stock-search input {
+    width: 100%;
+    padding: 10px;
+    font-family: 'Inter', sans-serif;
+    color: white;
+    background-image: url('magnifying-glass.png');
+    background-repeat: no-repeat;
+    background-position: right;
+  }
+  
+  .stock-search .dropdown {
+    position: absolute;
+    width: 100%;
+    background-color: #333;
+    color: white;
+  }
+  
+  .stock-search .dropdown div {
+    padding: 10px;
+    cursor: pointer;
+  }
+  
+  .stock-search .dropdown div:hover {
+    background-color: #666;
+  }
+  

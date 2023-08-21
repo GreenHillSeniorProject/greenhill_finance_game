@@ -1,0 +1,19 @@
+.user-stats {
+  font-family: 'Inter', sans-serif;
+  color: white;
+  padding: 20px;
+}
+
+.user-stats .center-text {
+  text-align: center;
+}
+
+.user-stats .trophies {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.user-stats .trophies img {
+  margin: 10px;
+}

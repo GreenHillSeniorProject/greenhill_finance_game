@@ -1,0 +1,61 @@
+.container {
+  background-color: #1b3c35;
+}
+
+.invite-advisor {
+  font-family: 'Inter', sans-serif;
+  color: white;
+  padding: 20px;
+}
+  
+.invite-advisor .center-text {
+    text-align: center;
+}
+  
+.invite-adviser .tokens {
+  display: flex;
+  border: 1px solid white;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.invite-adviser input {
+  display: block;
+  margin: 10px auto;
+  font-size: 20px;
+  color:black;
+  border: 1px solid black;
+  border-radius: 10px;
+  padding: 10px 10px;
+}
+
+.invite-adviser button {
+  align-items: center;
+  background-color: #224957;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  display: block;
+  font-size: 20px ;
+  margin: 10px auto;
+  min-height: 40px;
+  padding: 10px 10px;
+}
+
+.invite-adviser button:hover, .invite-adviser button:focus {
+  color: #90ae7c;
+}
+
+.invite-adviser button:active {
+  color: white;
+}
+
+forgot-password-link:link
+{
+  color: red;
+}
+
+
+
+
+  

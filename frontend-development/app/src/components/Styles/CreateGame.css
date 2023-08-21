@@ -1,0 +1,140 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #1b3c35;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.greenify {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 70px;
+}
+
+.green {
+  color: #90ae7c;
+}
+
+.ify {
+  color: #ffffff;
+}
+
+.title-text {
+  font-family: 'Josefin Sans', sans-serif;
+  color: #ffffff;
+}
+
+.create-game-form {
+  align-items: center;
+}
+
+.create-game-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.game-type {
+  display: flex;
+  width: 472px;
+  padding: 10px 15px;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid #5C586C;
+  background: #FFF;
+  border-radius: 11px;
+}
+
+/* .money-market-fund {
+  display: flex;
+  width: 472px;
+  height: 48px;
+  padding: 6px 8px 7px 15px;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 282px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  border: 1px solid #5C586C;
+  background: #FFF;
+} */
+
+.money-market-fund {
+  display: flex;
+  width: 472px;
+  padding: 10px 15px;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid #5C586C;
+  background: #FFF;
+  border-radius: 11px;
+}
+
+.sponsor {
+  display: flex;
+  width: 472px;
+  padding: 10px 15px;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid #5C586C;
+  background: #FFF;
+  border-radius: 11px;
+}
+
+.date-label {
+  color: #ffffff;
+}
+
+/* .start-date {
+  display: flex;
+  width: 472px;
+  padding-bottom: 0px;
+  justify-content: center;
+  align-items: center;
+} */
+
+.start-date {
+  width: 472px;
+  height: 44px;
+  border-radius: 11px;
+  border: 1px solid #5C586C;
+  background: #FFF;
+}
+
+.end-date {
+  width: 472px;
+  height: 44px;
+  border-radius: 11px;
+  border: 1px solid #5C586C;
+  background: #FFF;
+}
+
+.col {
+  float: left;
+  width: 50%;
+}
+
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.submit-container {
+  /* shadow: 0px_4px_4px_0px;
+  rgba: (0,_0,_0,_0.3);  */
+  background: #84af76;
+  flex: flex-col;
+  text-justify: center; 
+  width: full;
+  height: 16;
+  align-items: center;
+  /* rounded: lg; */
+}

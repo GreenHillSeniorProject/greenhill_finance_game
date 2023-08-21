@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <title>GreenHill's Greenify</title>
+</head>
+<body>
+    <h1>Greenify Employee Signup</h1>
+    <form action="/user/createEmployee" method="post">
+        <!-- first name -->
+        <label for="first_name">First name:</label>
+        <input name="first_name" type="text" id="first_name" required><br><br>
+        <!-- last name -->
+        <label for="last_name">Last name:</label>
+        <input name="last_name" type="text" id="last_name" required><br><br>
+        <!-- username -->
+        <label for="username">User name:</label>
+        <input name="username" type="text" id="username" requiede><br><br>
+        <!-- email -->
+        <label for="email">Email:</label>
+        <input name="email" type="email" id="email" required><br><br>
+        <!-- password -->
+        <label for="password">Password:</label>
+        <input name="password" type="password" id="password" min="8" required><br><br>
+        <!-- submit -->
+        <button type="submit">Submit</button>
+    </form>
+
+    <h1>Current Greenhill Employees</h1>
+      <ul id="employee-list"></ul>
+      <script>
+        fetch('/select')
+            .then(response => response.json())
+            .then(employees => {
+                const adminList = document.getElementById('employee-list');
+                employees.forEach(employee => {
+                    const li = document.createElement('li');
+                    const boldName = document.createElement('b');
+                    boldName.textContent = 'Name: ';
+                    const name = document.createTextNode(employee.first_name + ' ' + employee.last_name);
+                    const boldEmail = document.createElement('b');
+                    boldEmail.textContent = ' Email: ';
+                    const email = document.createTextNode(employee.email);
+                    const boldUsername = document.createElement('b');
+                    boldUsername.textContent = ' Username: ';
+                    const username = document.createTextNode(employee.username);
+                    li.appendChild(boldName);
+                    li.appendChild(name);
+                    li.appendChild(document.createElement('br'));
+                    li.appendChild(boldEmail);
+                    li.appendChild(email);
+                    li.appendChild(document.createElement('br'));
+                    li.appendChild(boldUsername);
+                    li.appendChild(username);
+                    li.appendChild(document.createElement('br'));
+                    li.appendChild(document.createElement('br'));
+                    adminList.appendChild(li);
+                });
+            })
+            .catch(error => console.error(error));
+      </script>
+
+
+      <h1>Delete an employee</h1>
+      <form action="/delete" method="post">
+        <label for="employee">Select an employee:</label>
+        <select name="employee_id" id="employee">
+          <!-- populate the dropdown with the current employees -->
+          <script>
+            fetch('/select')
+              .then(response => response.json())
+              .then(employees => {
+                const select = document.getElementById('employee');
+                employees.forEach(employee => {
+                  const option = document.createElement('option');
+                  option.value = employee.employee_id;
+                  option.text = `${employee.first_name} ${employee.last_name}`;
+                  select.add(option);
+                });
+              });
+          </script>
+        </select>
+        <button type="submit">Delete employee</button>
+      </form>
+
+      <script>
+        // populate the employee list on page load
+        const employeeList = document.getElementById('employee');
+        fetch('/select')
+          .then(response => response.json())
+          .then(employees => {
+            employees.forEach(employee => {
+              const li = document.createElement('li');
+              li.textContent = `${employee.first_name} ${employee.last_name}`;
+              employeeList.appendChild(li);
+            });
+          });
+      </script>
+
+
+</body>
+</html>

@@ -1,0 +1,75 @@
+.stock-stats-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background-color: #1b3c35;
+  font-family: 'Josefin Sans', sans-serif;
+  position: relative;
+}
+
+.hamburger-icon {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+.stock-stats-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.green-hill {
+  color: #ffffff;
+  font-size: 44px;
+  margin: 0;
+}
+
+.investment-reporting {
+  color: #90ae7c;
+  font-size: 22px;
+  margin: 0;
+}
+
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80%;
+}
+
+.stock-name {
+  font-size: 24px;
+  color: #84af76;
+  margin-bottom: 10px;
+}
+
+.stock-info {
+  background-color: #ffffff;
+  border-radius: 5px;
+  padding: 20px;
+  color: #333333;
+  line-height: 1.5;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .green-hill {
+    font-size: 18px;
+  }
+
+  .investment-reporting {
+    font-size: 9px;
+  }
+
+  main {
+    width: 90%;
+  }
+}

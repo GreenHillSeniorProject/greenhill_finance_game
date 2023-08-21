@@ -1,0 +1,33 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #1b3c35;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.greenify {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 70px;
+}
+
+.green {
+  color: #90ae7c;
+}
+
+.ify {
+  color: #ffffff;
+}
+
+.title-text {
+  font-family: 'Josefin Sans', sans-serif;
+  color: #ffffff;
+}

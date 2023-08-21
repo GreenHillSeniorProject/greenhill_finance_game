@@ -1,0 +1,102 @@
+.stock-title
+{
+  color: #1b3c35  ;
+}
+
+
+.ticker-title
+{
+  color: #1b3c35;
+}
+
+.price-title
+{
+  color: #1b3c35;
+}
+
+.about-title
+{
+  color: #1b3c35;
+}
+
+
+.buy-sell {
+    font-family: 'Inter', sans-serif;
+    color: white;
+    padding: 20px;
+}
+  
+  .buy-sell .center-text {
+    text-align: center;
+}
+  
+  .buy-sell form {
+    margin: 10px 0;
+}
+  
+  .action-section input {
+    border-radius: 5px;
+    border-color: transparent;
+}
+  
+  .buy-sell .portfolio {
+    background-color: darkgray;
+    padding: 10px;
+    margin-top: 10px;
+}
+  
+  .buy-sell .portfolio label {
+    display: block;
+    margin: 5px 0;
+}
+
+
+.dollar-buttons {
+  margin-top: 10px;
+}
+
+
+
+.current-portfolio-values-section
+{
+  color:#1b3c35;
+  font-weight: bold;
+  display: flex;
+  justify-content: start;
+  margin: 0 auto;
+  margin-top: 20px;
+  flex-direction: column;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  width: 50%;
+}
+
+.current-portfolio-box
+{
+  align-items: left;
+  background-color: darkgray;
+}
+
+.current-portfolio-values-section .value
+{
+  color: white;
+  font-weight: 400;
+}
+
+.buy-button
+{
+  background-color: darkgray;
+  border-radius: 10px;
+  border-color: black;
+  color: black;
+  margin-right: 10px;
+}
+
+.sell-button
+{
+  background-color: darkgray;
+  border-radius: 10px;
+  border-color: black;
+  color: black;
+  margin-left: 10px;
+}

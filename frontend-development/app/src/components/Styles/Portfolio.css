@@ -1,0 +1,92 @@
+.portfolio {
+  background-color: #1b3c35;
+  color: white;
+  font-family: 'Josefin Sans', sans-serif;
+  padding: 20px;
+  text-align: center;
+}
+
+.portfolio h1 {
+  font-size: 3em;
+}
+
+.info {
+  background-color: darkgrey;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  width: 80%;
+}
+
+.info div {
+  display: flex;
+  justify-content: space-between;
+  width: 80%;
+}
+
+.info .value {
+  color: white;
+}
+
+table {
+  margin: 20px auto;
+  border-collapse: collapse;
+  width: 80%;
+}
+
+table th,
+table td {
+  border: 1px solid black;
+  padding: 10px;
+  color: black;
+  font-family: 'Josefin Sans', sans-serif;
+  background-color: white;
+}
+
+table th {
+  background-color: #90ae7c;
+  color: white;
+}
+
+.subtract-button {
+  color:red;
+  margin-right: 5px;
+}
+
+.add-button {
+  color: green;
+  margin-left: 5px;
+}
+
+.updateButton {
+  background-color: #90ae7c; 
+  border-color: transparent;
+  border-radius: 10px;
+  color: white;
+  font-family: 'Josefin Sans', sans-serif;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.buy-sell-tile {
+  background-color: #90ae7c; 
+}
+
+.open-buy-sell-tile-button
+{
+  margin-left: 10px;
+}
+
+.close-buy-sell-tile-button 
+{
+  background-color: gray; 
+  border-color: transparent;
+  border-radius: 10px;
+  color: white;
+  font-family: 'Josefin Sans', sans-serif;
+  padding: 10px;
+  margin-bottom: 10px;
+}

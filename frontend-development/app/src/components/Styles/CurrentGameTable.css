@@ -1,0 +1,23 @@
+/* Apply Inter font family to table */
+table {
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+  color: white;
+  text-align: center;
+}
+
+/* Header styles */
+table thead {
+  background-color: darkblue;
+}
+
+/* Row styles */
+table tbody tr {
+  background-color: lightblue;
+}
+
+/* Styles for image in the cell */
+table tbody tr td img {
+  width: 50px; /* Dynamic? */
+  height: auto;
+}
