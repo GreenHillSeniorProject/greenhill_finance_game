@@ -973,17 +973,7 @@ app.get('/homepage', async (req, res) => {
     const aveRank = await fetchAveRanking(userId);
     const firstRank = await fetchNumber1stRankedGames(userId);
     const secondRank = await fetchNumber2ndRankedGames(userId);
-<<<<<<< HEAD
-<<<<<<< HEAD
     const thirdRank = await fetchNumber3rdRankedGames(userId);
-
-=======
-    const thirdRank = await fetchNumber3rdRankedGames(userId);\
-=======
-    const thirdRank = await fetchNumber3rdRankedGames(userId);
->>>>>>> 3b0b07e... homepage resp fix
-    const aveRank = await fetchAveRanking(userId);
->>>>>>> 4aca701... homepage response stuff
 
     // Construct and send the response
     const responseData = {
@@ -991,17 +981,10 @@ app.get('/homepage', async (req, res) => {
       currGameUsers: currGameUsers,
       pastGames: pastGames,
       ranks: {
-<<<<<<< HEAD
-        aveRank: aveRank,
-        firstRank: firstRank,
-        secondRank: secondRank,
-        thirdRank: thirdRank
-=======
-        firstRank: firstRank,
-        secondRank: secondRank,
-        thirdRank: thirdRank,
-        aveRank: aveRank
->>>>>>> 4aca701... homepage response stuff
+        aveRank: parseInt(aveRank['AVG(ranking)']),
+        firstRank: firstRank['COUNT(ranking)'],
+        secondRank: secondRank['COUNT(ranking)'],
+        thirdRank: thirdRank['COUNT(ranking)']
       }
     };
 
