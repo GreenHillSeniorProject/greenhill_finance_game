@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
-let util = require('util');
+//unused variable
+// let util = require('util');
+const bcrypt = require('bcrypt');
 let dbCTLR = require('../controllers/dbController');
 let db = dbCTLR.db;
+//unused variable
 let jwtCTLR = require('../controllers/tokenController');
 
 let signIn_main = async (req, res) => {
 	let { email, password } = req.body;
+
+	console.log("request recieved");
 
   if (typeof email !== 'string' || typeof password !== 'string') {
 	res.status(400).send({ message: "Invalid email or password format" });
@@ -23,7 +28,7 @@ let signIn_main = async (req, res) => {
 		  res.send({ err: err });
 		}
 		if (isMatch) {
-		  const token = await getTokenFromUserId(result[0].user_id);
+		  const token = await jwtCTLR.getTokenFromUserId(result[0].user_id);
 		  res.send({token});
 		} else {
 		  res.status(400).send({ message: "Invalid email or password" });
@@ -35,4 +40,6 @@ let signIn_main = async (req, res) => {
   });
 }
 
-router.post('signin', signIn_main);
+router.post('/signin', signIn_main);
+
+module.exports = router;
