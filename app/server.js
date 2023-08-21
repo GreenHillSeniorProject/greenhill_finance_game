@@ -248,7 +248,7 @@ const processActionsTicker = async (portfolioId, actions) => {
   }
 };
 
-app.post("/buysellshare", (res, req) => {
+app.post("/buysellshare", (req, res) => {
   try {
     var data = JSON.parse(req.body);
     console.log(data);
@@ -258,7 +258,7 @@ app.post("/buysellshare", (res, req) => {
   }
 });
 
-app.post("/buysellcash", (res, req) => {
+app.post("/buysellcash", (req, res) => {
   try {
     var data = JSON.parse(req.body);
     console.log(data);
