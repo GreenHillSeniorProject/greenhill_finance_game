@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import '../../components/Styles/Portfolio.css';
 import BuySellTile from './BuySellTile';
-// import BuySellTile from './BuySellTile';
 
 const Portfolio = () => {
   const [data, setData] = useState({});
