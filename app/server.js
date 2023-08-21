@@ -547,7 +547,7 @@ const fetchPastPortfolios = (userId) => {
 
 // Function to fetch user's past games in order of most recent game end date
 const fetchPastGames = (userId) => {
-  const sql = 'SELECT g.game_name, g.sponsor, g.type FROM Portfolios p JOIN GameInfo g ON p.game_id = g.game_id WHERE p.user_id = ? and p.game_id != (SELECT current_game from users where user_id = ?) ORDER BY g.end_date DESC;';
+  const sql = 'SELECT g.game_name, g.sponsor, g.type FROM Portfolios p JOIN GameInfo g ON p.game_id = g.game_id WHERE p.user_id = ? AND p.game_id != (SELECT current_game FROM Users WHERE user_id = ?) ORDER BY g.end_date DESC;';
   const values = [userId, userId];
   return new Promise((resolve, reject) => {
     db.query(sql, values, (error, results, fields) => {
@@ -604,7 +604,7 @@ const fetchGamePortfolios = (gameId) => {
 
 // Function to fetch current game
 const fetchCurrentGame = async (userId) => {
-  const sql = 'SELECT current_game from Users WHERE user_id = ?';
+  const sql = 'SELECT current_game FROM Users WHERE user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
@@ -619,7 +619,7 @@ const fetchCurrentGame = async (userId) => {
 
 // Function to fetch current portfolio
 const fetchCurrentPortfolioId = async (userId) => {
-  const sql = 'SELECT p.portfolio_id from Portfolios p JOIN Users u ON p.game_id = u.current_game WHERE p.user_id = ?';
+  const sql = 'SELECT p.portfolio_id FROM Portfolios p JOIN Users u ON p.game_id = u.current_game WHERE p.user_id = ?';
   const values = [userId];
   const query = util.promisify(db.query).bind(db);
 
