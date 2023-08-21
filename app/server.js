@@ -167,6 +167,8 @@ const validateSave = async (portfolioId) => {
   currDate.setHours(0,0,0,0);
   console.log(lastSave);
   console.log(currDate);
+  let numStockCorrect = false;
+  let balanceCorrect = false;
 
   const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await(fetchGameInfoForPortfolio(portfolioId));
 
@@ -180,15 +182,25 @@ const validateSave = async (portfolioId) => {
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
   if (numStocks < min_stocks || numStocks > max_stocks) {
-    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`)
+    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`);
+    numStockCorrect = false;
+  } else {
+    numStockCorrect = true;
   }
   
   // check non-negative final cash balance (assuming a valid list of transactions is given)
   const final_cash_balance = await(processActions(portfolioId, actions));
   if (final_cash_balance < 0) {
     console.log("Cannot have a negative cash balance.")
+    balanceCorrect = false;
+  } else {
+    balanceCorrect = true;
   }
-}
+
+  if (numStockCorrect == true && balanceCorrect == true) {
+    return true;
+  }
+};
 
 // Function to see portfolio value results after a list of transactions [id1: -2, id2: 2]
 const processActions = async (portfolioId, actions) => {
@@ -236,6 +248,26 @@ const processActionsTicker = async (portfolioId, actions) => {
   }
 };
 
+app.post("/buysellshare", (res, req) => {
+  try {
+    var data = JSON.parse(req.body);
+    console.log(data);
+    await processActionsTicker(data.portfolioId, data.actionsShare);
+  } catch (error) {
+    throw error;
+  }
+});
+
+app.post("/buysellcash", (res, req) => {
+  try {
+    var data = JSON.parse(req.body);
+    console.log(data);
+    await processActionsTicker(data.portfolioId, data.actionsCash);
+  } catch (error) {
+    throw error;
+  }
+});
+
 // Function to get timestamp of last portfolio save
 const fetchLastSave = async (portfolioId) => {
   const sql = 'SELECT last_save FROM Portfolios WHERE portfolio_id = ?';
@@ -250,7 +282,7 @@ const fetchLastSave = async (portfolioId) => {
       }
     });
   });
-}
+};
 
 // Function to buy stock by shares and update portfolio
 const buyStockByShare = async (portfolioId, stockId, quantity) => {
@@ -511,7 +543,7 @@ const updatePortfolioDayValue = async (portfolioId) => {
       }
     });
   });
-}
+};
 
 // Function to fetch user's past portfolios in order of most recent game end date
 const fetchPastPortfolios = (userId) => {
