@@ -16,6 +16,7 @@ const SECRET_KEY = config.SECRET_KEY;
 
 let inviteAdvisorRoutes = require('./routes/inviteRoutes');
 let signInRoutes = require('./routes/signInRoutes');
+let signUpRoutes = require('./routes/signUpRoutes');
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -762,32 +763,6 @@ const fetchNumber3rdRankedGames =  async (userId) => {
 	} 
 };
 
-const getTokenFromUserId = (userId) => {
-	return new Promise((resolve, reject) => {
-		const payload = { userId }; // Create a payload object
-		jwt.sign(payload, SECRET_KEY, (err, token) => {
-			if (err) {
-				return reject(err);
-			}
-			resolve(token);
-		});
-	});
-};
-
-const getUserIdFromToken = (token) => {
-	return new Promise((resolve, reject) => {
-		jwt.verify(token.toString(), SECRET_KEY, (err, payload) => {
-			if (err) {
-				console.log('in get user id error');
-				return reject(err);
-			}
-
-			const userId = payload.userId; // Extract userId directly from payload
-			resolve(userId);
-		});
-	});
-};
-
 
 
 
@@ -820,54 +795,6 @@ const getUserById = async (userId) => {
 		throw error;
 	}
 };
-
-
-app.post("/signup", async (req, res) => {
-	const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
-
-	if (typeof email !== 'string' || typeof password !== 'string') {
-		res.status(400).send({ error: 'Invalid email or password format' });
-		return;
-	}
-
-	console.log(req.body);
-	console.log(invitation_code);
-	try {
-		const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
-		if (referralResult.length === 0) {
-			res.send({ error: 'Invalid invitation code' });
-			return;
-		}
-		const referrer_id = referralResult[0].referrer_id;
-
-		const hashedPassword = bcrypt.hashSync(password, 10);
-
-		const insertResult = await runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-		[first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
-		const user_id = insertResult.insertId;
-
-		await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
-
-		const token = jwt.sign({ userId: user_id }, config.SECRET_KEY);
-
-		res.send({ message: 'Account created successfully', token: token });
-	} catch (error) {
-		console.error('Error creating account:', error);
-		res.status(500).send({ error: 'An error occurred while creating the account' });
-	}
-});
-
-function runQuery(query, params) {
-	return new Promise((resolve, reject) => {
-		db.query(query, params, (error, result) => {
-			if (error) {
-				reject(error);
-			} else {
-				resolve(result);
-			}
-		});
-	});
-}
 
 /* app.post('/signin', async (req, res) => {
 	const { email, password } = req.body;

@@ -17,3 +17,17 @@ exports.getTokenFromUserId = (userId) => {
 		});
 	});
 };
+
+exports.getUserIdFromToken = (token) => {
+	return new Promise((resolve, reject) => {
+		jwt.verify(token.toString(), SECRET_KEY, (err, payload) => {
+			if (err) {
+				console.log('in get user id error');
+				return reject(err);
+			}
+
+			const userId = payload.userId; // Extract userId directly from payload
+			resolve(userId);
+		});
+	});
+};
