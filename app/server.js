@@ -190,6 +190,14 @@ const validateSave = async (portfolioId, actions) => {
 
   if (lastSaveCheck && numStockCheck && balanceCheck) {
     return true;
+  } else if (lastSaveCheck === false) {
+    return "You have already made changes to your portfolio today. These changes will not be saved."
+  } else if (numStockCheck === false) {
+    return "Must have between ${min_stocks} and ${max_stocks} different stocks."
+  } else if (balanceCheck === false) {
+    return "Cannot have a negative cash balance."
+  } else {
+    return "Failed to update portfolio."
   }
 }
 
@@ -239,28 +247,40 @@ const processActionsTicker = async (portfolioId, actions) => {
   }
 };
 
-app.post('/update-portfolio', async (req, res) => {
-  console.log('hit here');
-  const updatedPortfolioData = req.body;
-  const portfolioId = updatedPortfolioData.portfolioId;
-  const actions = updatedPortfolioData.actions;
-  console.log("upd");
-  console.log(updatedPortfolioData);
-  console.log("id");
-
-  console.log(portfolioId);
-  console.log("actions");
-
-  console.log(actions);
+//Function to save buy and sell of stock from a list of transactions to db after successful validation
+const saveBuyAndSellStock = async (portfolioId, actions) => {
   try {
-    const validate = await validateSave(portfolioId,actions);
-    if (validate == true) {
-      console.log("Check passed");
-      res.send("Check passed");
+    for (const stockId in actions) {
+      if (actions[stockId] > 0) {
+        await buyStockByShare(portfolioId, stockId, actions[stockId]);
+      } else if (actions[stockId] < 0) {
+        await sellStockByShare(portfolioId, stockId, actions[stockId]);
+      } else {
+        return 0;
+      }   
     }
-    else
-    {
-      console.log('delete - validation did not pass');
+  } catch (error) {
+    throw error;
+  }
+};
+
+app.post('/update-portfolio', async (req, res) => {
+  try {
+    console.log('hit here');
+    const updatedPortfolioData = req.body;
+    const portfolioId = updatedPortfolioData.portfolioId;
+    const actions = updatedPortfolioData.actions;
+    if (JSON.stringify(actions) === '{}') {
+      res.send("No action performed");
+    } else {
+      const validate = await validateSave(portfolioId,actions);
+      if (validate == true) {
+        res.send("Validation passed");
+        await saveBuyAndSellStock(portfolioId,actions);
+      } else {
+        console.log('delete - validation did not pass');
+        res.send(validate);
+      }
     }
   } catch (error) {
     throw error;
