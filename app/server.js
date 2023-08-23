@@ -247,6 +247,22 @@ const processActionsTicker = async (portfolioId, actions) => {
   }
 };
 
+//Function to update last save
+const updateLastSave = async (portfolioId) => {
+  const sql = 'UPDATE Portfolios SET last_save = NOW() WHERE portfolio_id = ?';
+  const values = [portfolioId];
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (error, results, fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        console.log(typeof(results[0].last_save));
+        resolve(results[0].last_save);
+      }
+    });
+  });
+}
+
 //Function to save buy and sell of stock from a list of transactions to db after successful validation
 const saveBuyAndSellStock = async (portfolioId, actions) => {
   try {
@@ -257,8 +273,9 @@ const saveBuyAndSellStock = async (portfolioId, actions) => {
         await sellStockByShare(portfolioId, stockId, actions[stockId]);
       } else {
         return 0;
-      }   
+      }
     }
+    await updateLastSave(portfolioId);
   } catch (error) {
     throw error;
   }
@@ -274,7 +291,7 @@ app.post('/update-portfolio', async (req, res) => {
       res.send("No action performed");
     } else {
       const validate = await validateSave(portfolioId,actions);
-      if (validate == true) {
+      if (validate === true) {
         res.send("Validation passed");
         await saveBuyAndSellStock(portfolioId,actions);
       } else {
