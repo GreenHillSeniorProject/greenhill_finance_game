@@ -162,13 +162,13 @@ const validateSave = async (portfolioId, actions) => {
   let balanceCheck = false;
 
   // check if portfolio has been saved today
-  if (lastSave >= currDate()) {
+  if (lastSave >= currDate) {
     console.log("You have already made changes to your portfolio today. These changes will not be saved.");
     lastSaveCheck = false;
   } else {
     lastSaveCheck = true;
   }
-
+  
 
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
@@ -240,14 +240,27 @@ const processActionsTicker = async (portfolioId, actions) => {
 };
 
 app.post('/update-portfolio', async (req, res) => {
+  console.log('hit here');
   const updatedPortfolioData = req.body;
-  const portfolioId = req.body.portfolioId;
-  const actions = req.body.actions;
+  const portfolioId = updatedPortfolioData.portfolioId;
+  const actions = updatedPortfolioData.actions;
+  console.log("upd");
+  console.log(updatedPortfolioData);
+  console.log("id");
+
+  console.log(portfolioId);
+  console.log("actions");
+
+  console.log(actions);
   try {
     const validate = await validateSave(portfolioId,actions);
     if (validate == true) {
       console.log("Check passed");
       res.send("Check passed");
+    }
+    else
+    {
+      console.log('delete - validation did not pass');
     }
   } catch (error) {
     throw error;
