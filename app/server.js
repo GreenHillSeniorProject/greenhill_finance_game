@@ -148,7 +148,7 @@ const getStockHistoryFromDB = async (symbol) => {
 };
 
 // Function to validate if portfolio changes can be saved
-const validateSave = async (portfolioId) => {
+const validateSave = async (portfolioId, actions) => {
   const lastSave = await(fetchLastSave(portfolioId));
   const currDate = new Date();
   currDate.setHours(0,0,0,0);
@@ -157,23 +157,39 @@ const validateSave = async (portfolioId) => {
 
   const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await(fetchGameInfoForPortfolio(portfolioId));
 
+  let lastSaveCheck = false;
+  let numStockCheck = false;
+  let balanceCheck = false;
 
   // check if portfolio has been saved today
   if (lastSave >= currDate()) {
-    console.log("You have already made changes to your portfolio today. These changes will not be saved.")
+    console.log("You have already made changes to your portfolio today. These changes will not be saved.");
+    lastSaveCheck = false;
+  } else {
+    lastSaveCheck = true;
   }
 
 
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
   if (numStocks < min_stocks || numStocks > max_stocks) {
-    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`)
+    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`);
+    numStockCheck = false;
+  } else {
+    numStockCheck = true;
   }
   
   // check non-negative final cash balance (assuming a valid list of transactions is given)
   const final_cash_balance = await(processActions(portfolioId, actions));
   if (final_cash_balance < 0) {
     console.log("Cannot have a negative cash balance.")
+    balanceCheck = false;
+  } else {
+    balanceCheck = true;
+  }
+
+  if (lastSaveCheck && numStockCheck && balanceCheck) {
+    return true;
   }
 }
 
@@ -222,6 +238,21 @@ const processActionsTicker = async (portfolioId, actions) => {
     throw error;
   }
 };
+
+app.post('/update-portfolio', async (req, res) => {
+  const updatedPortfolioData = req.body;
+  const portfolioId = req.body.portfolioId;
+  const actions = req.body.actions;
+  try {
+    const validate = await validateSave(portfolioId,actions);
+    if (validate == true) {
+      console.log("Check passed");
+      res.send("Check passed");
+    }
+  } catch (error) {
+    throw error;
+  }
+});
 
 // Function to get timestamp of last portfolio save
 const fetchLastSave = async (portfolioId) => {
