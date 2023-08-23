@@ -164,7 +164,7 @@ const getStockHistoryFromDB = async (symbol) => {
 };
 
 // Function to validate if portfolio changes can be saved
-const validateSave = async (portfolioId) => {
+const validateSave = async (portfolioId, actions) => {
   const lastSave = await(fetchLastSave(portfolioId));
   const currDate = new Date();
   currDate.setHours(0,0,0,0);
@@ -173,23 +173,47 @@ const validateSave = async (portfolioId) => {
 
   const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await(fetchGameInfoForPortfolio(portfolioId));
 
+  let lastSaveCheck = false;
+  let numStockCheck = false;
+  let balanceCheck = false;
 
   // check if portfolio has been saved today
-  if (lastSave >= currDate()) {
-    console.log("You have already made changes to your portfolio today. These changes will not be saved.")
+  if (lastSave >= currDate) {
+    console.log("You have already made changes to your portfolio today. These changes will not be saved.");
+    lastSaveCheck = false;
+  } else {
+    lastSaveCheck = true;
   }
-
+  
 
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
   if (numStocks < min_stocks || numStocks > max_stocks) {
-    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`)
+    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`);
+    numStockCheck = false;
+  } else {
+    numStockCheck = true;
   }
   
   // check non-negative final cash balance (assuming a valid list of transactions is given)
   const final_cash_balance = await(processActions(portfolioId, actions));
   if (final_cash_balance < 0) {
     console.log("Cannot have a negative cash balance.")
+    balanceCheck = false;
+  } else {
+    balanceCheck = true;
+  }
+
+  if (lastSaveCheck && numStockCheck && balanceCheck) {
+    return true;
+  } else if (lastSaveCheck === false) {
+    return "You have already made changes to your portfolio today. These changes will not be saved."
+  } else if (numStockCheck === false) {
+    return "Must have between ${min_stocks} and ${max_stocks} different stocks."
+  } else if (balanceCheck === false) {
+    return "Cannot have a negative cash balance."
+  } else {
+    return "Failed to update portfolio."
   }
 }
 
@@ -239,6 +263,64 @@ const processActionsTicker = async (portfolioId, actions) => {
   }
 };
 
+//Function to update last save
+const updateLastSave = async (portfolioId) => {
+  const sql = 'UPDATE Portfolios SET last_save = NOW() WHERE portfolio_id = ?';
+  const values = [portfolioId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results;
+  } catch (error) {
+    throw error;
+  }
+}
+
+//Function to save buy and sell of stock from a list of transactions to db after successful validation
+const saveBuyAndSellStock = async (portfolioId, actions) => {
+  try {
+    for (const stockId in actions) {
+      if (actions[stockId] > 0) {
+        await buyStockByShare(portfolioId, stockId, actions[stockId]);
+      } else if (actions[stockId] < 0) {
+        await sellStockByShare(portfolioId, stockId, -actions[stockId]);
+      } else {
+        return 0;
+      }
+    }
+    await updateLastSave(portfolioId);
+  } catch (error) {
+    throw error;
+  }
+};
+
+app.post('/update-portfolio', async (req, res) => {
+  try {
+    console.log('hit here');
+    const updatedPortfolioData = req.body;
+    const portfolioId = updatedPortfolioData.portfolioId;
+    const actions = updatedPortfolioData.actions;
+    if (JSON.stringify(actions) === '{}') {
+      res.send("No action performed");
+    } else {
+      const validate = await validateSave(portfolioId,actions);
+      if (validate === true) {
+        res.send("Validation passed");
+        await saveBuyAndSellStock(portfolioId,actions);
+      } else {
+        console.log('delete - validation did not pass');
+        res.send(validate);
+      }
+    }
+  } catch (error) {
+    throw error;
+  }
+});
+
+
+
+
 //Function to populate actions list
 const addAction = async (stock_id, quantity, actions) => {
   try {
@@ -280,8 +362,8 @@ const buyStockByShare = async (portfolioId, stockId, quantity) => {
     const totalCost = stockPrice * quantity;
 
     if (portfolioValue >= totalCost) {
-      const newCashBalance = cashBalance - totalCost
-      const newAssetValue = assetValue + totalCost
+      const newCashBalance = cashBalance - totalCost;
+      const newAssetValue = assetValue + totalCost;
       const newPortfolioValue = newCashBalance + newAssetValue;
 
       await updateStockQuantity(portfolioId, stockId, quantity);
@@ -1036,7 +1118,7 @@ app.get('/portfolio', async (req, res) => {
     const portfolioValues = await fetchPortfolioValues(portfolioId);
     const stocks = await fetchPortfolioStocks(portfolioId);
 
-    const data = { portfolioValues, stocks };
+    const data = { portfolioValues, stocks, portfolioId };
     console.log(data);
 
     if (portfolioId) {
