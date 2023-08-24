@@ -193,7 +193,12 @@ const validateSave = async (portfolioId, actions, startingObj) => {
   console.log(lastSave);
   console.log(currDate);
 
-  const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await(fetchGameInfoForPortfolio(portfolioId));
+  const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await fetchGameInfoForPortfolio(portfolioId);
+  
+  console.log('shit we got back');
+  console.log(game_id);
+  console.log(game_name);
+
 
   let lastSaveCheck = false;
   let numStockCheck = false;
@@ -210,7 +215,7 @@ const validateSave = async (portfolioId, actions, startingObj) => {
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
   if (numStocks < min_stocks || numStocks > max_stocks) {
-    console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`);
+    console.log('Must have between ' + min_stocks + ' and ' + max_stocks + ' different stocks.');
     numStockCheck = await compareActions(startingObj, actions, min_stocks, max_stocks);
   } else {
     numStockCheck = await compareActions(startingObj, actions, min_stocks, max_stocks);
@@ -230,7 +235,7 @@ const validateSave = async (portfolioId, actions, startingObj) => {
   } else if (lastSaveCheck === false) {
     return "You have already made changes to your portfolio today. These changes will not be saved."
   } else if (numStockCheck === false) {
-    return "Must have between ${min_stocks} and ${max_stocks} different stocks."
+    return 'Must have between ' + min_stocks + ' and ' + max_stocks + ' different stocks.';
   } else if (balanceCheck === false) {
     return "Cannot have a negative cash balance."
   } else {
@@ -668,22 +673,17 @@ const fetchPastGames = (userId) => {
   });
 }
 
-const fetchGameInfoForPortfolio = (portfolioId) => {
+const fetchGameInfoForPortfolio = async (portfolioId) => {
   const sql = 'SELECT * FROM GameInfo g JOIN Portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
   const values = [portfolioId];
-  return new Promise((resolve, reject) => {
-    db.query(sql, values, (error, results, fields) => {
-      if (error) {
-        reject(error);
-      } else {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(results);
-        }
-      }
-    });
-  });
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
 };
 
 
