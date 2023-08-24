@@ -163,8 +163,30 @@ const getStockHistoryFromDB = async (symbol) => {
   });
 };
 
+
+//Function to compare two action objects
+const compareActions = async (obj, actions, min_stocks, max_stocks) => {
+  for (const stockId in obj) {
+    if (actions.hasOwnProperty(stockId)) {
+        obj[stockId] += actions[stockId];
+        if (obj[stockId] == 0) {
+          delete obj[stockId];
+        }
+    }
+  }
+  if (JSON.stringify(obj) === '{}') {
+  return false;
+  } else if (Object.keys(obj).length < min_stocks || Object.keys(obj).length > max_stocks) {
+    return false;
+  } else {
+    console.log(obj)
+    return true;
+  }
+};
+
+
 // Function to validate if portfolio changes can be saved
-const validateSave = async (portfolioId, actions) => {
+const validateSave = async (portfolioId, actions, startingObj) => {
   const lastSave = await(fetchLastSave(portfolioId));
   const currDate = new Date();
   currDate.setHours(0,0,0,0);
@@ -185,14 +207,13 @@ const validateSave = async (portfolioId, actions) => {
     lastSaveCheck = true;
   }
   
-
   // check num of unique stocks
   const numStocks = await(fetchStockCount(portfolioId));
   if (numStocks < min_stocks || numStocks > max_stocks) {
     console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`);
-    numStockCheck = false;
+    numStockCheck = await compareActions(startingObj, actions, min_stocks, max_stocks);
   } else {
-    numStockCheck = true;
+    numStockCheck = await compareActions(startingObj, actions, min_stocks, max_stocks);
   }
   
   // check non-negative final cash balance (assuming a valid list of transactions is given)
@@ -301,10 +322,11 @@ app.post('/update-portfolio', async (req, res) => {
     const updatedPortfolioData = req.body;
     const portfolioId = updatedPortfolioData.portfolioId;
     const actions = updatedPortfolioData.actions;
+    const startingObj = updatedPortfolioData.startingStocksObj;
     if (JSON.stringify(actions) === '{}') {
       res.send("No action performed");
     } else {
-      const validate = await validateSave(portfolioId,actions);
+      const validate = await validateSave(portfolioId,actions, startingObj);
       if (validate === true) {
         res.send("Validation passed");
         await saveBuyAndSellStock(portfolioId,actions);
@@ -1160,6 +1182,8 @@ const main = async () => {
 
   console.log(await(fetchCurrentPortfolioId(2)));
   console.log(await(fetchPortfolioStocks(7)));
+
+
 
   // console.log(await(fetchUserInfo(2)));
   // console.log(await(fetchPastGames(2)));
