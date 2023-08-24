@@ -168,34 +168,84 @@ const getStockHistoryFromDB = async (symbol) => {
 	});
 };
 
+
+//Function to compare two action objects
+const compareActions = async (obj, actions, min_stocks, max_stocks) => {
+  for (const stockId in obj) {
+    if (actions.hasOwnProperty(stockId)) {
+        obj[stockId] += actions[stockId];
+        if (obj[stockId] == 0) {
+          delete obj[stockId];
+        }
+    }
+  }
+  if (JSON.stringify(obj) === '{}') {
+  return false;
+  } else if (Object.keys(obj).length < min_stocks || Object.keys(obj).length > max_stocks) {
+    return false;
+  } else {
+    console.log(obj)
+    return true;
+  }
+};
+
+
 // Function to validate if portfolio changes can be saved
-const validateSave = async (portfolioId) => {
-	const lastSave = await(fetchLastSave(portfolioId));
-	const currDate = new Date();
-	currDate.setHours(0,0,0,0);
-	console.log(lastSave);
-	console.log(currDate);
+const validateSave = async (portfolioId, actions, startingObj) => {
+  const lastSave = await(fetchLastSave(portfolioId));
+  const currDate = new Date();
+  currDate.setHours(0,0,0,0);
+  console.log(lastSave);
+  console.log(currDate);
 
-	const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await(fetchGameInfoForPortfolio(portfolioId));
-
-
-	// check if portfolio has been saved today
-	if (lastSave >= currDate()) {
-		console.log("You have already made changes to your portfolio today. These changes will not be saved.")
-	}
+  const { game_id, game_name, starting_cash, start_date, end_date, min_stocks, max_stocks, last_update } = await fetchGameInfoForPortfolio(portfolioId);
+  
+  console.log('shit we got back');
+  console.log(game_id);
+  console.log(game_name);
 
 
-	// check num of unique stocks
-	const numStocks = await(fetchStockCount(portfolioId));
-	if (numStocks < min_stocks || numStocks > max_stocks) {
-		console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`)
-	}
-	
-	// check non-negative final cash balance (assuming a valid list of transactions is given)
-	const final_cash_balance = await(processActions(portfolioId, actions));
-	if (final_cash_balance < 0) {
-		console.log("Cannot have a negative cash balance.")
-	}
+  let lastSaveCheck = false;
+  let numStockCheck = false;
+  let balanceCheck = false;
+
+  // check if portfolio has been saved today
+  if (lastSave >= currDate) {
+    console.log("You have already made changes to your portfolio today. These changes will not be saved.");
+    lastSaveCheck = false;
+  } else {
+    lastSaveCheck = true;
+  }
+  
+  // check num of unique stocks
+  const numStocks = await(fetchStockCount(portfolioId));
+  if (numStocks < min_stocks || numStocks > max_stocks) {
+    console.log('Must have between ' + min_stocks + ' and ' + max_stocks + ' different stocks.');
+    numStockCheck = await compareActions(startingObj, actions, min_stocks, max_stocks);
+  } else {
+    numStockCheck = await compareActions(startingObj, actions, min_stocks, max_stocks);
+  }
+  
+  // check non-negative final cash balance (assuming a valid list of transactions is given)
+  const final_cash_balance = await(processActions(portfolioId, actions));
+  if (final_cash_balance < 0) {
+    console.log("Cannot have a negative cash balance.")
+    balanceCheck = false;
+  } else {
+    balanceCheck = true;
+  }
+
+  if (lastSaveCheck && numStockCheck && balanceCheck) {
+    return true;
+  } else if (lastSaveCheck === false) {
+    return "You have already made changes to your portfolio today. These changes will not be saved."
+  } else if (numStockCheck === false) {
+    return 'Must have between ' + min_stocks + ' and ' + max_stocks + ' different stocks.';
+  } else if (balanceCheck === false) {
+    return "Cannot have a negative cash balance."
+  } else {
+    return "Failed to update portfolio."
+  }
 }
 
 // Function to see portfolio value results after a list of transactions [id1: -2, id2: 2]
@@ -244,6 +294,65 @@ const processActionsTicker = async (portfolioId, actions) => {
 	}
 };
 
+//Function to update last save
+const updateLastSave = async (portfolioId) => {
+  const sql = 'UPDATE Portfolios SET last_save = NOW() WHERE portfolio_id = ?';
+  const values = [portfolioId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results;
+  } catch (error) {
+    throw error;
+  }
+}
+
+//Function to save buy and sell of stock from a list of transactions to db after successful validation
+const saveBuyAndSellStock = async (portfolioId, actions) => {
+  try {
+    for (const stockId in actions) {
+      if (actions[stockId] > 0) {
+        await buyStockByShare(portfolioId, stockId, actions[stockId]);
+      } else if (actions[stockId] < 0) {
+        await sellStockByShare(portfolioId, stockId, -actions[stockId]);
+      } else {
+        return 0;
+      }
+    }
+    await updateLastSave(portfolioId);
+  } catch (error) {
+    throw error;
+  }
+};
+
+app.post('/update-portfolio', async (req, res) => {
+  try {
+    console.log('hit here');
+    const updatedPortfolioData = req.body;
+    const portfolioId = updatedPortfolioData.portfolioId;
+    const actions = updatedPortfolioData.actions;
+    const startingObj = updatedPortfolioData.startingStocksObj;
+    if (JSON.stringify(actions) === '{}') {
+      res.send("No action performed");
+    } else {
+      const validate = await validateSave(portfolioId,actions, startingObj);
+      if (validate === true) {
+        res.send("Validation passed");
+        await saveBuyAndSellStock(portfolioId,actions);
+      } else {
+        console.log('delete - validation did not pass');
+        res.send(validate);
+      }
+    }
+  } catch (error) {
+    throw error;
+  }
+});
+
+
+
+
 //Function to populate actions list
 const addAction = async (stock_id, quantity, actions) => {
 	try {
@@ -284,10 +393,10 @@ const buyStockByShare = async (portfolioId, stockId, quantity) => {
 		const stockPrice = await fetchStockPrice(stockId);
 		const totalCost = stockPrice * quantity;
 
-		if (portfolioValue >= totalCost) {
-			const newCashBalance = cashBalance - totalCost
-			const newAssetValue = assetValue + totalCost
-			const newPortfolioValue = newCashBalance + newAssetValue;
+    if (portfolioValue >= totalCost) {
+      const newCashBalance = cashBalance - totalCost;
+      const newAssetValue = assetValue + totalCost;
+      const newPortfolioValue = newCashBalance + newAssetValue;
 
 			await updateStockQuantity(portfolioId, stockId, quantity);
 			await updatePortfolioValues(portfolioId, newAssetValue, newCashBalance, newPortfolioValue);
@@ -569,22 +678,17 @@ const fetchPastGames = (userId) => {
   });
 }
 
-const fetchGameInfoForPortfolio = (portfolioId) => {
-	const sql = 'SELECT * FROM GameInfo g JOIN Portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
-	const values = [portfolioId];
-	return new Promise((resolve, reject) => {
-		db.query(sql, values, (error, results, fields) => {
-			if (error) {
-				reject(error);
-			} else {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(results);
-				}
-			}
-		});
-	});
+const fetchGameInfoForPortfolio = async (portfolioId) => {
+  const sql = 'SELECT * FROM GameInfo g JOIN Portfolios p on p.game_id = g.game_id WHERE portfolio_id = ?;';
+  const values = [portfolioId];
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results[0];
+  } catch (error) {
+    throw error;
+  }
 };
 
 
@@ -680,10 +784,10 @@ const fetchUserInfo = async (userId) => {
 };
 
 //Function to calculate day delta
-const fetchDayDelta = async (userId, portfolio_id) => {
-	const sql = 'SELECT (portfolio_value - yesterday_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
-	const values = [userId,userId];
-	const query = util.promisify(db.query).bind(db);
+const fetchDayDelta = async (userId) => {
+  const sql = 'SELECT (portfolio_value - yesterday_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
 
 	try {
 		const results = await query(sql, values);
@@ -694,10 +798,10 @@ const fetchDayDelta = async (userId, portfolio_id) => {
 };
 
 //Function to calculate week delta
-const fetchWeekDelta = async (userId, portfolio_id) => {
-	const sql = 'SELECT (portfolio_value - last_week_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
-	const values = [userId,userId];
-	const query = util.promisify(db.query).bind(db);
+const fetchWeekDelta = async (userId) => {
+  const sql = 'SELECT (portfolio_value - last_week_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
 
 	try {
 		const results = await query(sql, values);
@@ -709,9 +813,9 @@ const fetchWeekDelta = async (userId, portfolio_id) => {
 
 //Function to calculate average rank
 const fetchAveRanking =  async (userId) => {
-	const sql = 'SELECT AVG(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE user_id = ?';
-	const values = [userId];
-	const query = util.promisify(db.query).bind(db);
+  const sql = 'SELECT AVG(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE user_id = ?';
+  const values = [userId];
+  const query = util.promisify(db.query).bind(db);
 
 	try {
 		const results = await query(sql, values);
@@ -723,9 +827,9 @@ const fetchAveRanking =  async (userId) => {
 
 //Function to calculate # of 1st rank games
 const fetchNumber1stRankedGames =  async (userId) => {
-	const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
-	const values = [1, userId];
-	const query = util.promisify(db.query).bind(db);
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [1, userId];
+  const query = util.promisify(db.query).bind(db);
 
 	try {
 		const results = await query(sql, values);
@@ -737,9 +841,9 @@ const fetchNumber1stRankedGames =  async (userId) => {
 
 //Function to calculate # of 2nd rank games
 const fetchNumber2ndRankedGames =  async (userId) => {
-	const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
-	const values = [2, userId];
-	const query = util.promisify(db.query).bind(db);
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [2, userId];
+  const query = util.promisify(db.query).bind(db);
 
 	try {
 		const results = await query(sql, values);
@@ -751,9 +855,9 @@ const fetchNumber2ndRankedGames =  async (userId) => {
 
 //Function to calculate # of 3rd rank games
 const fetchNumber3rdRankedGames =  async (userId) => {
-	const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER_BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
-	const values = [3, userId];
-	const query = util.promisify(db.query).bind(db);
+  const sql = 'SELECT COUNT(ranking) FROM (SELECT user_id, game_id, portfolio_value, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY portfolio_value DESC) ranking FROM Portfolios ORDER BY game_id) ranking_table WHERE ranking = ? AND user_id = ?';
+  const values = [3, userId];
+  const query = util.promisify(db.query).bind(db);
 
 	try {
 		const results = await query(sql, values);
@@ -935,8 +1039,8 @@ app.get('/portfolio', async (req, res) => {
 		const portfolioValues = await fetchPortfolioValues(portfolioId);
 		const stocks = await fetchPortfolioStocks(portfolioId);
 
-		const data = { portfolioValues, stocks };
-		console.log(data);
+    const data = { portfolioValues, stocks, portfolioId };
+    console.log(data);
 
 		if (portfolioId) {
 			res.json(data);
@@ -976,6 +1080,9 @@ const main = async () => {
 
 
   console.log(await(fetchCurrentPortfolioId(2)));
+  console.log(await(fetchPortfolioStocks(7)));
+
+
 
 	// console.log(await(fetchUserInfo(2)));
 	// console.log(await(fetchPastGames(2)));
