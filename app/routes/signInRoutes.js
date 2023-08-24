@@ -15,22 +15,22 @@ let signIn_main = async (req, res) => {
 
 	db.query('SELECT * FROM Users WHERE email = ?', [email], (err, result) => {
 		if (err) {
-		res.send({ err: err });
+			res.status(500).send({ message: "error with database querying" });
 		}
 		if (result.length > 0) {
-		bcrypt.compare(password, result[0].password, async (err, isMatch) => {
-			if (err) {
-			res.send({ err: err });
-			}
-			if (isMatch) {
-			const token = await jwtCTLR.getTokenFromUserId(result[0].user_id);
-			res.send({token});
-			} else {
-			res.status(400).send({ message: "Invalid email or password" });
-			}
-		});
+			bcrypt.compare(password, result[0].password, async (err, isMatch) => {
+				if (err) {
+					res.status(500).send({ message: "error hashing password" });
+				}
+				if (isMatch) {
+					const token = await jwtCTLR.getTokenFromUserId(result[0].user_id);
+					res.send({token});
+				} else {
+					res.status(400).send({ message: "Invalid email or password" });
+				}
+			});
 		} else {
-		res.status(500).send({ message: "Invalid email or password" });
+			res.status(500).send({ message: "Invalid email or password" });
 		}
 	});
 }
