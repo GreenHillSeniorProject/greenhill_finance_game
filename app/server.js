@@ -148,7 +148,7 @@ const getStockHistoryFromDB = async (symbol) => {
 };
 
 // Function to validate if portfolio changes can be saved
-const validateSave = async (portfolioId, actions) => {
+const validateSave = async (portfolioId, oriObj, actions) => {
   const lastSave = await(fetchLastSave(portfolioId));
   const currDate = new Date();
   currDate.setHours(0,0,0,0);
@@ -174,9 +174,9 @@ const validateSave = async (portfolioId, actions) => {
   const numStocks = await(fetchStockCount(portfolioId));
   if (numStocks < min_stocks || numStocks > max_stocks) {
     console.log(`Must have between ${min_stocks} and ${max_stocks} different stocks.`);
-    numStockCheck = false;
+    numStockCheck = await compareActions(oriObj, actions, min_stocks, max_stocks);
   } else {
-    numStockCheck = true;
+    numStockCheck = await compareActions(oriObj, actions, min_stocks, max_stocks);
   }
   
   // check non-negative final cash balance (assuming a valid list of transactions is given)
@@ -251,16 +251,14 @@ const processActionsTicker = async (portfolioId, actions) => {
 const updateLastSave = async (portfolioId) => {
   const sql = 'UPDATE Portfolios SET last_save = NOW() WHERE portfolio_id = ?';
   const values = [portfolioId];
-  return new Promise((resolve, reject) => {
-    db.query(sql, values, (error, results, fields) => {
-      if (error) {
-        reject(error);
-      } else {
-        console.log(typeof(results[0].last_save));
-        resolve(results[0].last_save);
-      }
-    });
-  });
+  const query = util.promisify(db.query).bind(db);
+
+  try {
+    const results = await query(sql, values);
+    return results;
+  } catch (error) {
+    throw error;
+  }
 }
 
 //Function to save buy and sell of stock from a list of transactions to db after successful validation
@@ -278,6 +276,26 @@ const saveBuyAndSellStock = async (portfolioId, actions) => {
     await updateLastSave(portfolioId);
   } catch (error) {
     throw error;
+  }
+};
+
+//Function to compare two action objects
+const compareActions = async (obj, actions, min_stocks, max_stocks) => {
+  for (const stockId in obj) {
+    if (actions.hasOwnProperty(stockId)) {
+        obj[stockId] += actions[stockId];
+        if (obj[stockId] == 0) {
+          delete obj[stockId];
+        }
+    }
+  }
+  if (JSON.stringify(obj) === '{}') {
+  return false;
+  } else if (Object.keys(obj).length < min_stocks || Object.keys(obj).length > max_stocks) {
+    return false;
+  } else {
+    console.log(obj)
+    return true;
   }
 };
 
