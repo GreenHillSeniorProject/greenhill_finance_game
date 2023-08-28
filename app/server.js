@@ -1301,6 +1301,12 @@ app.use('/', inviteAdvisorRoutes);
 app.use('/', signInRoutes);
 app.use('/', signUpRoutes);
 
+//error handling middleware
+app.use((error, req, res, next) => {
+	//sends the status code or 500 if no status code was given
+	res.status(error.status || 500).json({ message: error.message });
+});
+
 app.listen(3001, () => {
 	console.log("local host server running")
 });

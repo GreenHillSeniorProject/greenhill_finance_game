@@ -7,41 +7,117 @@ let jwtCTLR = require('../controllers/tokenController');
 let config = require('../../config.json');
 
 
-let signUp_main = async (req, res) => {
-	console.log("reached signup");
+let signUp_main = async (req, res,) => {
 
-    const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
+    let { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
 
 	if (typeof email !== 'string' || typeof password !== 'string') {
-		res.status(400).send({ error: 'Invalid email or password format' });
-		return;
+		let error = new Error("Invalid email and/or password format");
+    	error.status = 400;
+    	next(error);
 	}
 
 	console.log(req.body);
 	console.log(invitation_code);
+
 	try {
-		const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
-		if (referralResult.length === 0) {
-			console.log("Flag: No results from query");
-			res.send({ error: 'Invalid invitation code' });
-			return;
+		//check the invitation code iwth the database
+		let referralResult;
+		try {
+			referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
+			if (referralResult === null || referralResult.length === 0) {
+				throw new Error("Referral not found");
+			}
+			if (referralResult.length > 1) {
+				throw new Error("Uuuuuhhhh... this isn't supposed to happen\nThere are multiple Referral Entries with more the same code");
+			}
+		} catch (error) {
+			// Error logging on server
+			console.log("Error fetching referral: ", error.message);
+
+			// Error sent to client
+			const err = new Error("Error fetching referral");
+			err.status = 400;
+			next(err);
 		}
-		const referrer_id = referralResult[0].referrer_id;
 
-		const hashedPassword = bcrypt.hashSync(password, 10);
+		if (referralResult.length === 0) {
+			let error = new Error("Invalid invitation code");
+    		error.status = 400;
+    		next(error);
+		}
 
-		const insertResult = await runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-		[first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
-		const user_id = insertResult.insertId;
+		// line not used, uncomment if necessary
+		// const referrer_id = referralResult[0].referrer_id;
 
-		await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
 
-		const token = jwtCTLR.sign({ userId: user_id }, config.SECRET_KEY);
+		//Hash the password using bcrypt
+		let hashedPassword;
+		try {
+			hashedPassword = bcrypt.hashSync(password, 10);
+		} catch (error) {
+			//error logged on server
+			console.log("Error hashing passwords: ", error.message);
+			//error sent to client
+			err = new Error("Error hashing passwords");
+			err.status = 400;
+			next(err);
+		}
+
+		//insert user into database
+		let insertResult, user_id;
+		try {
+			insertResult = await runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+			user_id = insertResult.insertId;
+		} catch (error) {
+			// error logged on server
+			console.log("Error inserting data into Users table: ", error.message);
+			// error sent to client
+			err = new Error("Error creating user");
+			err.status = 400;
+			next(err);
+		}
+
+		// update the referral to reflect that it's been used
+		try {
+			await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
+		} catch (error) {
+			// Error logging on server
+			console.log("Error updating Referrals: ", error.message);
+
+			// Error sent to client
+			const err = new Error("Error updating Referrals");
+			err.status = 400;
+			next(err);
+		}
+
+		let token;
+		try {
+			token = jwtCTLR.sign({ userId: user_id }, config.SECRET_KEY);
+			if (token === null) {
+				throw new Error("Token is null");
+			}
+		} catch (error) {
+			// Error logging on server
+			console.log("Error signing token: ", error.message);
+
+			// Error sent to client
+			const err = new Error("Error signing token");
+			err.status = 400;
+			next(err);
+		}
 
 		res.send({ message: 'Account created successfully', token: token });
 	} catch (error) {
 		console.error('Error creating account:', error);
 		res.status(500).send({ error: 'An error occurred while creating the account' });
+		// Error logging on server
+		console.log("Error signing token: ", error.message);
+
+		// Error sent to client
+		const err = new Error("Error signing token");
+		err.status = 400;
+		next(err);
 	}
 }
 
