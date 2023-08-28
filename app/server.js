@@ -692,20 +692,6 @@ const fetchGamePortfolios = (gameId) => {
 	});
 };
 
-// Function to fetch current game
-const fetchCurrentGame = async (userId) => {
-  const sql = 'SELECT current_game FROM Users WHERE user_id = ?';
-  const values = [userId];
-  const query = util.promisify(db.query).bind(db);
-
-	try {
-		const results = await query(sql, values);
-		return results[0].current_game;
-	} catch (error) {
-		throw error;
-	}
-};
-
 
 // Function to fetch current portfolio
 const fetchCurrentPortfolioId = async (userId) => {

@@ -1,15 +1,21 @@
 const express = require('express');
-const authMiddleware = express.Router();
+const router = express.Router();
 
 // Define invalidatedTokens at the global scope
 const invalidatedTokens = new Set();
 //This allows you to use invalidated tokens outside of this 
 exports.invalidatedTokens = invalidatedTokens;
 
-authMiddleware.use((req, res, next) => {
-	let { authorization } = req.headers;
+let authentication_main = (req, res, next) => {
+	const authHeader = req.headers.authorization;
+	  
+	if (!authHeader || !authHeader.startsWith('Bearer ')) {
+		return res.status(401).json({ error: 'Invalid authorization header' });
+	}
 	
-	if (!authorization || invalidatedTokens.has(authorization)) {
+	const token = authHeader.split(' ')[1]; // Extract the token part
+	
+	if (!token || invalidatedTokens.has(token)) {
 		console.log("Unauthorized access attempt: ", authorization ? "Token is invalidated" : "Token is missing");
 		const err = new Error('Unauthorized');
 		err.status = 401;
@@ -17,7 +23,7 @@ authMiddleware.use((req, res, next) => {
 	}
 	
 	next();
-});
+};
 
 exports.invalidateToken = (token) => {
 	if (!token) {
@@ -28,4 +34,6 @@ exports.invalidateToken = (token) => {
 	invalidatedTokens.add(token);
 }
 
-module.exports = authMiddleware;
+router.post('/logout', authentication_main);
+
+module.exports = router;
