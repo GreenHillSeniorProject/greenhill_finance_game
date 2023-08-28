@@ -72,7 +72,8 @@ const getStockInfo = async (symbol) => {
     const data = response.data;
     return {
       symbol: symbol,
-      description: data.results.description
+      description: data.results.description,
+      name: data.results.name
     };
   } catch (error) {
     console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
@@ -88,8 +89,8 @@ const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duratio
 
 // Function to insert stock info into MySQL database
 const insertStock = async (stock) => {
-  const sql = 'INSERT INTO Stocks (ticker, description) VALUES (?, ?)';
-  const values = [stock.symbol, stock.description];
+  const sql = 'INSERT INTO Stocks (ticker, description, stock_name) VALUES (?, ?, ?)';
+  const values = [stock.symbol, stock.description, stock.name];
   try {
     const result = await util.promisify(db.query).bind(db)(sql, values);
     return result;
@@ -1189,9 +1190,9 @@ const main = async () => {
   task.start();
 
 
-  console.log(await(fetchCurrentPortfolioId(2)));
-  console.log(await(fetchPortfolioStocks(7)));
-
+  //console.log(await(fetchCurrentPortfolioId(2)));
+  //console.log(await(fetchPortfolioStocks(7)));
+  console.log(await(getStockInfo("AAPL")));
 
 
   // console.log(await(fetchUserInfo(2)));
