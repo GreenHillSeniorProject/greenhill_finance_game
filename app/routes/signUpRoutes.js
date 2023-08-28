@@ -1,8 +1,7 @@
 let express = require('express');
 let router = express.Router();
 let bcrypt = require('bcrypt');
-let dbCTLR = require('../controllers/dbController');
-let db = dbCTLR.db;
+let db = require('../controllers/dbController');
 let jwtCTLR = require('../controllers/tokenController');
 let config = require('../../config.json');
 
@@ -23,7 +22,7 @@ let signUp_main = async (req, res, next) => {
 	//check the invitation code iwth the database
 	let referralResult;
 	try {
-		referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
+		referralResult = await db.runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
 		if (referralResult === null || referralResult.length === 0) {
 			throw new Error("Referral not found");
 		}
@@ -59,7 +58,7 @@ let signUp_main = async (req, res, next) => {
 	//insert user into database
 	let insertResult, user_id;
 	try {
-		insertResult = await runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
+		insertResult = await db.runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
 		user_id = insertResult.insertId;
 	} catch (error) {
 		// error logged on server
@@ -72,7 +71,7 @@ let signUp_main = async (req, res, next) => {
 
 	// update the referral to reflect that it's been used
 	try {
-		await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
+		await db.runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
 	} catch (error) {
 		// Error logging on server
 		console.log("Error updating Referrals: ", error.message);
@@ -100,18 +99,6 @@ let signUp_main = async (req, res, next) => {
 	}
 
 	res.send({ message: 'Account created successfully', token: token });
-}
-
-function runQuery(query, params) {
-	return new Promise((resolve, reject) => {
-		db.query(query, params, (error, result) => {
-			if (error) {
-				reject(error);
-			} else {
-				resolve(result);
-			}
-		});
-	});
 }
 
 router.post("/signup", signUp_main);
