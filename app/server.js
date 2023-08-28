@@ -18,6 +18,7 @@ let inviteAdvisorRoutes = require('./routes/inviteRoutes');
 let signInRoutes = require('./routes/signInRoutes');
 let signUpRoutes = require('./routes/signUpRoutes');
 let homepageRoutes = require('./routes/homepageRoutes');
+let logoutRoutes = require('./routes/logoutRoutes');
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -865,25 +866,6 @@ const fetchNumber3rdRankedGames =  async (userId) => {
 	} 
 };
 
-
-
-
-// Function to generate a new referral code
-function generateReferralCode() {
-	// Generate a unique referral code according to your requirements
-	// For example, you can use a combination of letters and numbers
-	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-	const referralCodeLength = 8;
-	let referralCode = '';
-
-	for (let i = 0; i < referralCodeLength; i++) {
-		const randomIndex = Math.floor(Math.random() * characters.length);
-		referralCode += characters[randomIndex];
-	}
-
-	return referralCode;
-}
-
 // Define the function to get user data by ID
 const getUserById = async (userId) => {
 	try {
@@ -958,37 +940,6 @@ try {
 	}
 }); */
 
-app.post('/logout', (req, res) => {
-	const { token } = req.body;
-
-	if (!token) {
-		return res.status(400).json({ message: 'Token is missing in request' });
-	}
-
-	// Add the token to the invalidatedTokens blacklist
-	invalidatedTokens.add(token);
-
-	// TODO: You could also persist the blacklist in a file or database for better durability
-
-	res.status(200).json({ message: 'Logout successful' });
-});
-
-// Middleware to verify token on protected routes
-app.use('/protected', (req, res, next) => {
-	const { token } = req.headers;
-
-	if (!token || invalidatedTokens.has(token)) {
-		return res.status(401).json({ message: 'Unauthorized' });
-	}
-
-	// Continue with the next middleware if the token is valid
-	next();
-});
-
-// Protected route example
-app.get('/protected/data', (req, res) => {
-	res.status(200).json({ message: 'Protected data accessed successfully' });
-});
 
 app.get('/portfolio', async (req, res) => {
 	try {
@@ -1267,6 +1218,7 @@ app.use('/', inviteAdvisorRoutes);
 app.use('/', signInRoutes);
 app.use('/', signUpRoutes);
 app.use('/', homepageRoutes);
+app.use('/', logoutRoutes);
 
 //error handling middleware
 app.use((error, req, res, next) => {
