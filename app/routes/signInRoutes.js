@@ -27,10 +27,12 @@ let signIn_main = async (req, res) => {
 					res.send({token});
 				} else {
 					res.status(400).send({ message: "Invalid email or password" });
+					console.log("Flag: found but no password match");
 				}
 			});
 		} else {
 			res.status(500).send({ message: "Invalid email or password" });
+			console.log("Flag: no results from database");
 		}
 	});
 }

@@ -1299,6 +1299,7 @@ async function validatePassword(password, hashedPassword) {
 
 app.use('/', inviteAdvisorRoutes);
 app.use('/', signInRoutes);
+app.use('/', signUpRoutes);
 
 app.listen(3001, () => {
 	console.log("local host server running")

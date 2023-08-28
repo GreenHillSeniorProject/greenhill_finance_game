@@ -1,11 +1,15 @@
-const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcrypt');
+let express = require('express');
+let router = express.Router();
+let bcrypt = require('bcrypt');
 let dbCTLR = require('../controllers/dbController');
 let db = dbCTLR.db;
 let jwtCTLR = require('../controllers/tokenController');
+let config = require('../../config.json');
+
 
 let signUp_main = async (req, res) => {
+	console.log("reached signup");
+
     const { first_name, last_name, username, email, phone_number, password, invitation_code } = req.body;
 
 	if (typeof email !== 'string' || typeof password !== 'string') {
@@ -18,6 +22,7 @@ let signUp_main = async (req, res) => {
 	try {
 		const referralResult = await runQuery('SELECT referrer_id FROM Referrals WHERE referral_code = ?', [invitation_code]);
 		if (referralResult.length === 0) {
+			console.log("Flag: No results from query");
 			res.send({ error: 'Invalid invitation code' });
 			return;
 		}
