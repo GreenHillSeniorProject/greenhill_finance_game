@@ -16,7 +16,7 @@ let authentication_main = (req, res, next) => {
 	const token = authHeader.split(' ')[1]; // Extract the token part
 	
 	if (!token || invalidatedTokens.has(token)) {
-		console.log("Unauthorized access attempt: ", authorization ? "Token is invalidated" : "Token is missing");
+		console.log("Unauthorized access attempt: ", token ? "Token is invalidated" : "Token is missing");
 		const err = new Error('Unauthorized');
 		err.status = 401;
 		return next(err);

@@ -4,10 +4,10 @@ const fs = require("fs");
 const express = require("express");
 const moment = require("moment");
 const mysql = require("mysql2");
+const util =  require('util');
 const cors = require("cors");
 const axios = require('axios');
 const bcrypt = require('bcrypt');
-const util = require('util');
 const config = require('../config.json');
 const cron = require('node-cron');
 const jwt = require("jsonwebtoken");
@@ -702,66 +702,6 @@ const fetchCurrentPortfolioId = async (userId) => {
 	try {
 		const results = await query(sql, values);
 		return results[0].portfolio_id;
-	} catch (error) {
-		throw error;
-	}
-};
-
-// Function to fetch all users in a game in order of highest portfolio value
-const fetchGameUsers = (gameId) => {
-	const sql = 'SELECT u.username, p.portfolio_value, g.game_id FROM Users u JOIN Portfolios p ON u.user_id = p.user_id JOIN GameInfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
-	const values = [gameId];
-	return new Promise((resolve, reject) => {
-		db.query(sql, values, (error, results, fields) => {
-			if (error) {
-				reject(error);
-			} else {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(results);
-				}
-			}
-		});
-	});
-};
-
-const fetchUserInfo = async (userId) => {
-	const sql = 'SELECT first_name, last_name, username FROM Users WHERE user_id = ?';
-	const values = [userId];
-	const query = util.promisify(db.query).bind(db);
-
-	try {
-		const results = await query(sql, values);
-		return results[0];
-	} catch (error) {
-		throw error;
-	}
-};
-
-//Function to calculate day delta
-const fetchDayDelta = async (userId) => {
-  const sql = 'SELECT (portfolio_value - yesterday_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
-  const values = [userId,userId];
-  const query = util.promisify(db.query).bind(db);
-
-	try {
-		const results = await query(sql, values);
-		return results[0];
-	} catch (error) {
-		throw error;
-	}
-};
-
-//Function to calculate week delta
-const fetchWeekDelta = async (userId) => {
-  const sql = 'SELECT (portfolio_value - last_week_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
-  const values = [userId,userId];
-  const query = util.promisify(db.query).bind(db);
-
-	try {
-		const results = await query(sql, values);
-		return results[0];
 	} catch (error) {
 		throw error;
 	}

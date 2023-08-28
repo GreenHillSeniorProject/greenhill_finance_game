@@ -1,5 +1,6 @@
 let mysql = require("mysql2");
 let config = require('../../config.json');
+const util = require('util');
 
 let db = mysql.createConnection({
 	user: "root",
@@ -143,3 +144,67 @@ let fetchNumber3rdRankedGames =  async (userId) => {
 	} 
 };
 exports.fetchNumber3rdRankedGames = fetchNumber3rdRankedGames
+
+// Function to fetch all users in a game in order of highest portfolio value
+const fetchGameUsers = (gameId) => {
+	const sql = 'SELECT u.username, p.portfolio_value, g.game_id FROM Users u JOIN Portfolios p ON u.user_id = p.user_id JOIN GameInfo g ON p.game_id = g.game_id WHERE g.game_id = ? ORDER BY p.portfolio_value DESC';
+	const values = [gameId];
+	return new Promise((resolve, reject) => {
+		db.query(sql, values, (error, results, fields) => {
+			if (error) {
+				reject(error);
+			} else {
+				if (error) {
+					reject(error);
+				} else {
+					resolve(results);
+				}
+			}
+		});
+	});
+};
+exports.fetchGameUsers = fetchGameUsers;
+
+let fetchUserInfo = async (userId) => {
+	const sql = 'SELECT first_name, last_name, username FROM Users WHERE user_id = ?';
+	const values = [userId];
+	const query = util.promisify(db.query).bind(db);
+
+	try {
+		const results = await query(sql, values);
+		return results[0];
+	} catch (error) {
+		throw error;
+	}
+};
+exports.fetchUserInfo = fetchUserInfo;
+
+//Function to calculate day delta
+let fetchDayDelta = async (userId) => {
+  const sql = 'SELECT (portfolio_value - yesterday_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
+
+	try {
+		const results = await query(sql, values);
+		return results[0];
+	} catch (error) {
+		throw error;
+	}
+};
+exports.fetchDayDelta = fetchDayDelta;
+
+//Function to calculate week delta
+const fetchWeekDelta = async (userId) => {
+  const sql = 'SELECT (portfolio_value - last_week_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
+  const values = [userId,userId];
+  const query = util.promisify(db.query).bind(db);
+
+	try {
+		const results = await query(sql, values);
+		return results[0];
+	} catch (error) {
+		throw error;
+	}
+};
+exports.fetchWeekDelta = fetchWeekDelta;
