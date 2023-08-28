@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 
-router.use(authMiddleware);
+// router.use(authMiddleware);
 
-let homepage_main = async (req, res) => {
+let homepage_main = async (req, res, next) => {
         const authHeader = req.headers.authorization;
       
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -40,8 +40,7 @@ let homepage_main = async (req, res) => {
       
           res.json(responseData);
         } catch (error) {
-          console.error('Error decoding token:', error);
-          res.status(401).json({ error: 'Invalid token' });
+          next(error);
         }
 };
 
