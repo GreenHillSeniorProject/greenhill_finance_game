@@ -25,14 +25,16 @@ let authentication_main = (req, res, next) => {
 	next();
 };
 
-exports.invalidateToken = (token) => {
+let invalidateToken = async (token) => {
 	if (!token) {
 		return res.status(400).json({ message: 'Token is missing in request' });
 	}
-
+	console.log('flag: token added');
 	// Add the token to the invalidatedTokens blacklist
 	invalidatedTokens.add(token);
 }
+exports.invalidateToken = invalidateToken;
+
 
 router.post('/logout', authentication_main);
 

@@ -46,7 +46,6 @@ let homepage_main = async (req, res, next) => {
 				err.status = 400;
 				next(err);
 			}
-			  console.log('flag user: ', user);
 			// Construct and send the response
 			const responseData = {
 				user: user,
