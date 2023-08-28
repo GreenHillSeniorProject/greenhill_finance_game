@@ -6,7 +6,7 @@ let logout_main = async (req, res, next) => {
     const { token } = req.body;
   
     if (!token) {
-      return res.status(400).json({ message: 'Token is missing in request' });
+      res.status(400).json({ message: 'Token is missing in request' });
     }
   
     // Add the token to the invalidatedTokens blacklist
