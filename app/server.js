@@ -71,17 +71,18 @@ app.get('/faq', (req, res) => {
 
 // Function to fetch stock info for a given symbol from an external API (Polygon)
 const getStockInfo = async (symbol) => {
-	try {
-		const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
-		const data = response.data;
-		return {
-			symbol: symbol,
-			description: data.results.description
-		};
-	} catch (error) {
-		console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
-		return null;
-	}
+  try {
+    const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
+    const data = response.data;
+    return {
+      symbol: symbol,
+      description: data.results.description,
+      name: data.results.name
+    };
+  } catch (error) {
+    console.error(`Error fetching stock info for symbol ${symbol}: ${error.message}`);
+    return null;
+  }
 };
 
 // Create a variable to track the delay between requests
@@ -92,19 +93,19 @@ const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duratio
 
 // Function to insert stock info into MySQL database
 const insertStock = async (stock) => {
-	const sql = 'INSERT INTO Stocks (ticker, description) VALUES (?, ?)';
-	const values = [stock.symbol, stock.description];
-	try {
-		const result = await util.promisify(db.query).bind(db)(sql, values);
-		return result;
-	} catch (error) {
-		if (error.code === 'ER_DUP_ENTRY') {
-			console.log(`Skipping duplicate entry for ${stock.symbol}`);
-			return null;
-		} else {
-			throw error;
-		}
-	}
+  const sql = 'INSERT INTO Stocks (ticker, description, stock_name) VALUES (?, ?, ?)';
+  const values = [stock.symbol, stock.description, stock.name];
+  try {
+    const result = await util.promisify(db.query).bind(db)(sql, values);
+    return result;
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      console.log(`Skipping duplicate entry for ${stock.symbol}`);
+      return null;
+    } else {
+      throw error;
+    }
+  }
 };
 
 // Function to fetch stock prices from the market data endpoint and insert into StockHistory table
@@ -996,9 +997,9 @@ const main = async () => {
 	task.start();
 
 
-  console.log(await(fetchCurrentPortfolioId(2)));
-  console.log(await(fetchPortfolioStocks(7)));
-
+  //console.log(await(fetchCurrentPortfolioId(2)));
+  //console.log(await(fetchPortfolioStocks(7)));
+  console.log(await(getStockInfo("AAPL")));
 
 
 	// console.log(await(fetchUserInfo(2)));
