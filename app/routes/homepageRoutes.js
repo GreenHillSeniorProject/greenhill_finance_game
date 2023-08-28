@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-let db = require('../controllers/dbController');
-let jwtCTLR = require('../controllers/tokenController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 router.use(authMiddleware);

@@ -7,10 +7,10 @@ const invalidatedTokens = new Set();
 exports.invalidatedTokens = invalidatedTokens;
 
 authMiddleware.use((req, res, next) => {
-  let { token } = req.body;
+  let { authorization } = req.headers;
   
-  if (!token || invalidatedTokens.has(token)) {
-    console.log("Unauthorized access attempt: ", token ? "Token is invalidated" : "Token is missing");
+  if (!authorization || invalidatedTokens.has(authorization)) {
+    console.log("Unauthorized access attempt: ", authorization ? "Token is invalidated" : "Token is missing");
     const err = new Error('Unauthorized');
     err.status = 401;
     return next(err);
