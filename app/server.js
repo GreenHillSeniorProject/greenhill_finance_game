@@ -17,6 +17,7 @@ const SECRET_KEY = config.SECRET_KEY;
 let inviteAdvisorRoutes = require('./routes/inviteRoutes');
 let signInRoutes = require('./routes/signInRoutes');
 let signUpRoutes = require('./routes/signUpRoutes');
+let homepageRoutes = require('./routes/homepageRoutes');
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -32,9 +33,6 @@ cron.schedule('0 17 * * *', async () => {
 const app = express();
 app.use(express.json());
 app.use(cors());
-
-// Define invalidatedTokens at the global scope
-const invalidatedTokens = new Set();
 
 // Create MySQL database connection
 const db = mysql.createConnection({
@@ -1268,6 +1266,7 @@ async function validatePassword(password, hashedPassword) {
 app.use('/', inviteAdvisorRoutes);
 app.use('/', signInRoutes);
 app.use('/', signUpRoutes);
+app.use('/', homepageRoutes);
 
 //error handling middleware
 app.use((error, req, res, next) => {
