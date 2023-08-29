@@ -66,6 +66,6 @@ let homepage_main = async (req, res, next) => {
 		}
 };
 
-router.get('/homepage', homepage_main);
+router.get('/homepage', authMiddleware.authentication_main, homepage_main);
 
 module.exports = router;
