@@ -470,32 +470,6 @@ const sellStockByCashAmount = async (portfolioId, stockId, amount) => {
 	}
 };
 
-const fetchPortfolioValues = async (portfolioId) => {
-	const sql = 'SELECT cash_value, asset_value, portfolio_value FROM Portfolios WHERE portfolio_id = ?'
-	const values = [portfolioId];
-	const query = util.promisify(db.query).bind(db);
-
-	try {
-		const results = await query(sql, values);
-		return results[0];
-	} catch (error) {
-		throw error;
-	}
-};
-
-const fetchPortfolioStocks = async (portfolioId) => {
-  const sql = 'SELECT * FROM PortfolioStock p JOIN Stocks s on s.stock_id = p.stock_id JOIN StockHistory sh on sh.stock_id = s.stock_id WHERE portfolio_id = ?'
-  const values = [portfolioId];
-  const query = util.promisify(db.query).bind(db);
-
-	try {
-		const results = await query(sql, values);
-		return results;
-	} catch (error) {
-		throw error;
-	}
-};
-
 const updatePortfolioValues = async (portfolioId, assetValue, cashValue, portfolioValue) => {
 	const sql = 'UPDATE Portfolios SET asset_value = ?, cash_value = ?, portfolio_value = ? WHERE portfolio_id = ?'
 	const values = [assetValue, cashValue, portfolioValue, portfolioId];
@@ -673,41 +647,6 @@ const fetchGameInfoForPortfolio = async (portfolioId) => {
   }
 };
 
-
-// Function to fetch all portfolios in a game in order of highest portfolio value
-const fetchGamePortfolios = (gameId) => {
-	const sql = 'SELECT * FROM Portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
-	const values = [gameId];
-	return new Promise((resolve, reject) => {
-		db.query(sql, values, (error, results, fields) => {
-			if (error) {
-				reject(error);
-			} else {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(results);
-				}
-			}
-		});
-	});
-};
-
-
-// Function to fetch current portfolio
-const fetchCurrentPortfolioId = async (userId) => {
-  const sql = 'SELECT p.portfolio_id FROM Portfolios p JOIN Users u ON p.game_id = u.current_game WHERE p.user_id = ?';
-  const values = [userId];
-  const query = util.promisify(db.query).bind(db);
-
-	try {
-		const results = await query(sql, values);
-		return results[0].portfolio_id;
-	} catch (error) {
-		throw error;
-	}
-};
-
 /* app.post('/signin', async (req, res) => {
 	const { email, password } = req.body;
 
@@ -767,35 +706,6 @@ try {
 		res.send({ err: error.message });
 	}
 }); */
-
-
-app.get('/portfolio', async (req, res) => {
-	try {
-		const token = req.headers.authorization.split(' ')[1];
-		console.log('Token:', token); // Debugging
-		const userId = await getUserIdFromToken(token);
-		// Fetch user data from the database based on userId
-		const user = await getUserById(userId);
-		console.log('User ID:', user); // Debugging
-
-		const portfolioId = await fetchCurrentPortfolioId(userId);
-		console.log('Portfolio ID:', portfolioId); // Debugging
-
-		const portfolioValues = await fetchPortfolioValues(portfolioId);
-		const stocks = await fetchPortfolioStocks(portfolioId);
-
-    const data = { portfolioValues, stocks, portfolioId };
-    console.log(data);
-
-		if (portfolioId) {
-			res.json(data);
-		} else {
-			res.send({ message: "Portfolio does not exist" });
-		}
-	} catch (error) {
-		res.send({ err: error.message });
-	}
-});
 
 
 

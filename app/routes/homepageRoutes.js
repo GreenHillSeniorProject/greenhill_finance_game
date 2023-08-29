@@ -4,8 +4,6 @@ let authMiddleware = require('../middlewares/authMiddleware');
 let tokenCTLR = require('../controllers/tokenController');
 let db = require('../controllers/dbController');
 
-router.use(authMiddleware.authentication_main);
-
 let homepage_main = async (req, res, next) => {
 		const authHeader = req.headers.authorization;
 	  
@@ -16,7 +14,7 @@ let homepage_main = async (req, res, next) => {
             next(err);
 		}
 	  
-		const token = authHeader.split(' ')[1]; // Extract the token part
+		const token = req.headers.authorization.split(' ')[1]; // Extract the token part
 		
 		try {
 			const userId = await tokenCTLR.getUserIdFromToken(token);

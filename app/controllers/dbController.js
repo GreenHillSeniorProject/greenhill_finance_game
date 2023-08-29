@@ -195,7 +195,7 @@ let fetchDayDelta = async (userId) => {
 exports.fetchDayDelta = fetchDayDelta;
 
 //Function to calculate week delta
-const fetchWeekDelta = async (userId) => {
+let fetchWeekDelta = async (userId) => {
   const sql = 'SELECT (portfolio_value - last_week_value) FROM Portfolios WHERE game_id = (SELECT current_game FROM Users WHERE user_id = ?) and user_id = ?';
   const values = [userId,userId];
   const query = util.promisify(db.query).bind(db);
@@ -208,3 +208,67 @@ const fetchWeekDelta = async (userId) => {
 	}
 };
 exports.fetchWeekDelta = fetchWeekDelta;
+
+// Function to fetch all portfolios in a game in order of highest portfolio value
+let fetchGamePortfolios = (gameId) => {
+	const sql = 'SELECT * FROM Portfolios WHERE game_id = ? ORDER BY portfolio_value DESC';
+	const values = [gameId];
+	return new Promise((resolve, reject) => {
+		db.query(sql, values, (error, results, fields) => {
+			if (error) {
+				reject(error);
+			} else {
+				if (error) {
+					reject(error);
+				} else {
+					resolve(results);
+				}
+			}
+		});
+	});
+};
+exports.fetchGamePortfolios = fetchGamePortfolios;
+
+// Function to fetch current portfolio
+const fetchCurrentPortfolioId = async (userId) => {
+	const sql = 'SELECT p.portfolio_id FROM Portfolios p JOIN Users u ON p.game_id = u.current_game WHERE p.user_id = ?';
+	const values = [userId];
+	const query = util.promisify(db.query).bind(db);
+  
+	try {
+		const results = await query(sql, values);
+		return results[0].portfolio_id;
+	} catch (error) {
+		throw error;
+	}
+};
+exports.fetchCurrentPortfolioId = fetchCurrentPortfolioId;
+
+let fetchPortfolioValues = async (portfolioId) => {
+	const sql = 'SELECT cash_value, asset_value, portfolio_value FROM Portfolios WHERE portfolio_id = ?'
+	const values = [portfolioId];
+	const query = util.promisify(db.query).bind(db);
+
+	try {
+		const results = await query(sql, values);
+		return results[0];
+	} catch (error) {
+		throw error;
+	}
+};
+exports.fetchPortfolioValues = fetchPortfolioValues;
+
+let fetchPortfolioStocks = async (portfolioId) => {
+	const sql = 'SELECT * FROM PortfolioStock p JOIN Stocks s on s.stock_id = p.stock_id JOIN StockHistory sh on sh.stock_id = s.stock_id WHERE portfolio_id = ?'
+	const values = [portfolioId];
+	const query = util.promisify(db.query).bind(db);
+  
+	try {
+		const results = await query(sql, values);
+		return results;
+	} catch (error) {
+		throw error;
+	}
+};
+exports.fetchPortfolioStocks = fetchPortfolioStocks;
+
