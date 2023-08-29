@@ -327,33 +327,6 @@ const saveBuyAndSellStock = async (portfolioId, actions) => {
   }
 };
 
-app.post('/update-portfolio', async (req, res) => {
-  try {
-    console.log('hit here');
-    const updatedPortfolioData = req.body;
-    const portfolioId = updatedPortfolioData.portfolioId;
-    const actions = updatedPortfolioData.actions;
-    const startingObj = updatedPortfolioData.startingStocksObj;
-    if (JSON.stringify(actions) === '{}') {
-      res.send("No action performed");
-    } else {
-      const validate = await validateSave(portfolioId,actions, startingObj);
-      if (validate === true) {
-        res.send("Validation passed");
-        await saveBuyAndSellStock(portfolioId,actions);
-      } else {
-        console.log('delete - validation did not pass');
-        res.send(validate);
-      }
-    }
-  } catch (error) {
-    throw error;
-  }
-});
-
-
-
-
 //Function to populate actions list
 const addAction = async (stock_id, quantity, actions) => {
 	try {
