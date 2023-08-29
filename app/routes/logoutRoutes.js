@@ -7,14 +7,19 @@ let logout_main = async (req, res, next) => {
         const { authorization } = req.headers;
 
         if (!authorization || !authorization.startsWith('Bearer ')) {
-          return res.status(400).json({ message: 'Token is missing in request' });
+            console.log("token is missing in the request");
+            let err = new Error("token is missing in the request");
+            err.status = 400;
+            next(err);
         }
         let token = authorization.split(' ')[1];
 
         // Ensure token is not already invalidated
         if (authMiddleware.invalidatedTokens.has(token)) {
-            console.log("blacklisted token found");
-            return res.status(400).json({ message: 'Token already invalidated' });
+            console.log("token already blacklisted");
+            let err = new Error("provided token has already been invalidated");
+            err.status = 400;
+            next(err);
         }
 
         // Add the token to the invalidatedTokens blacklist
@@ -22,7 +27,10 @@ let logout_main = async (req, res, next) => {
     
         return res.status(200).json({ message: 'Logout successful' });
     } catch (error) {
-        return res.status(500).json({ message: `An error occurred: ${error.message}` });
+        console.log("token is missing in the request");
+        let err = new Error("token is missing in the request");
+        err.status = 400;
+        next(err);
     }
 }
 

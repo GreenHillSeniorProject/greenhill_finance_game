@@ -10,7 +10,10 @@ let homepage_main = async (req, res, next) => {
 		const authHeader = req.headers.authorization;
 	  
 		if (!authHeader || !authHeader.startsWith('Bearer ')) {
-		  return res.status(401).json({ error: 'Invalid authorization header' });
+			console.log("Invalid authorization header");
+            let err = new Error("Invalid authorization header");
+            err.status = 401;
+            next(err);
 		}
 	  
 		const token = authHeader.split(' ')[1]; // Extract the token part
