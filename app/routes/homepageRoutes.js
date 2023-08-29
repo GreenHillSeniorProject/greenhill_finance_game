@@ -4,7 +4,7 @@ let authMiddleware = require('../middlewares/authMiddleware');
 let tokenCTLR = require('../controllers/tokenController');
 let db = require('../controllers/dbController');
 
-// router.use(authMiddleware);
+router.use(authMiddleware.authentication_main);
 
 let homepage_main = async (req, res, next) => {
 		const authHeader = req.headers.authorization;

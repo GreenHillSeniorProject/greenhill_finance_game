@@ -19,6 +19,7 @@ let signInRoutes = require('./routes/signInRoutes');
 let signUpRoutes = require('./routes/signUpRoutes');
 let homepageRoutes = require('./routes/homepageRoutes');
 let logoutRoutes = require('./routes/logoutRoutes');
+let portfolioRoutes = require('./routes/portfolioRoutes');
 
 // Schedule task to run at 5 PM every day
 cron.schedule('0 17 * * *', async () => {
@@ -1046,6 +1047,7 @@ app.use('/', signInRoutes);
 app.use('/', signUpRoutes);
 app.use('/', homepageRoutes);
 app.use('/', logoutRoutes);
+app.use('/', portfolioRoutes);
 
 //error handling middleware
 app.use((error, req, res, next) => {
