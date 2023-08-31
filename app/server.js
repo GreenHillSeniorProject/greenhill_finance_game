@@ -45,18 +45,20 @@ const db = mysql.createConnection({
 	insecureAuth: true
 });
 
+//Route to and route handler for any faq information
 app.get('/faq', (req, res) => {
 	var sql = 'SELECT * FROM faq';
 	db.query(sql, (err, data) => {
 		if (err) {throw err;}
 		else {
-			// Send the data as a JSON response
+			// Send the data (Rows of faq questions and answers) as a JSON response
 			res.json(data);
 			console.log(data);
 		};
 	});
 });
 
+//ADMIN FUNCTIONALITY - Don't know if it works, it's so that you can insert a question and answer to the faq database
 /* app.post('/faq/add', (req, res) => {
 	try {
 	const question = req.body.question;
@@ -71,6 +73,7 @@ app.get('/faq', (req, res) => {
 }); */
 
 // Function to fetch stock info for a given symbol from an external API (Polygon)
+// Returns the stock symbol, description, and name of stock
 const getStockInfo = async (symbol) => {
   try {
     const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
