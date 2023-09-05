@@ -50,12 +50,7 @@ Thank you for playing!";
   //insert the invite to the Referrals table in the database
   //NOTE: The referrer ID will be dummy data for now, delete once auth tokens are set up
   console.log("made it to query")
-  const referralInsertQuery = 'INSERT INTO Referrals (referrer_id, referred_email, referral_code, status, expiration_date) VALUES (?, ?, ?, ?, ?)';
-  const expiration_date = new Date();
-  expiration_date.setDate(expiration_date.getDate() + 7); // Set the expiration date to 7 days from the current date
-  const referralInsertQueryAsync = util.promisify(db.query).bind(db);
-  await referralInsertQueryAsync(referralInsertQuery, [user_id, email, code, 'pending', expiration_date]);
-
+  dbCTLR.insertReferral(user_id, email, code);
 
   return mailtoLink;
 };
