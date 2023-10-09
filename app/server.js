@@ -27,6 +27,12 @@ cron.schedule('0 17 * * *', async () => {
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.listen(8080, () => {
+  console.log("Server running on port 3001");
+});
+
+
+
 
 // Define invalidatedTokens at the global scope
 const invalidatedTokens = new Set();
@@ -70,7 +76,9 @@ const getStockInfo = async (symbol) => {
   try {
     const response = await axios.get(`https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${config.polygonInfo}`);
     const data = response.data;
+    console.log(symbol, data.results.description, data.results.name);
     return {
+
       symbol: symbol,
       description: data.results.description,
       name: data.results.name
@@ -82,15 +90,16 @@ const getStockInfo = async (symbol) => {
 };
 
 // Create a variable to track the delay between requests
-const delay = 5 * 60 * 1000; // 5 minutes
+//const delay = 5 * 60 * 1000; // 5 minutes
+const delay = .4 * 60 * 1000; // 5 minutes
 
 // Function to delay the execution for the specified duration
 const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
 
 // Function to insert stock info into MySQL database
 const insertStock = async (stock) => {
-  const sql = 'INSERT INTO Stocks (ticker, description, stock_name) VALUES (?, ?, ?)';
-  const values = [stock.symbol, stock.description, stock.name];
+  const sql = 'INSERT INTO Stocks (ticker, description) VALUES (?, ?)';
+  const values = [stock.symbol, stock.description];
   try {
     const result = await util.promisify(db.query).bind(db)(sql, values);
     return result;
@@ -973,13 +982,14 @@ function runQuery(query, params) {
 // Route for handling user sign in requests
 app.post("/signin", async (req, res) => {
   let { email, password } = req.body;
-
+  
   if (typeof email !== 'string' || typeof password !== 'string') {
     res.status(400).send({ message: "Invalid email or password format" });
     return;
   }
 
   db.query('SELECT * FROM Users WHERE email = ?', [email], (err, result) => {
+    console.log(result, err)
     if (err) {
       res.send({ err: err });
     }
@@ -989,6 +999,7 @@ app.post("/signin", async (req, res) => {
           res.send({ err: err });
         }
         if (isMatch) {
+          console.log("PASSWORD _____ WORKS");
           const token = await getTokenFromUserId(result[0].user_id);
           res.send({token});
         } else {
@@ -1192,7 +1203,7 @@ const main = async () => {
 
   //console.log(await(fetchCurrentPortfolioId(2)));
   //console.log(await(fetchPortfolioStocks(7)));
-  console.log(await(getStockInfo("AAPL")));
+  console.log(await(getStockInfo("ETSY")));
 
 
   // console.log(await(fetchUserInfo(2)));
@@ -1264,7 +1275,7 @@ const main = async () => {
           const date = "2023-08-10"; // specify the date for which you want to fetch the market data
   
           try {
-            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonPrice}`);
+            const response = await axios.get(`https://api.polygon.io/v1/open-close/${symbol}/${date}?apiKey=${config.polygonInfo}`);
             const data = response.data;
             const { high, low, open, close } = data;
   
