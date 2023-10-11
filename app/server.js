@@ -27,10 +27,6 @@ cron.schedule('0 17 * * *', async () => {
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.listen(8080, () => {
-  console.log("Server running on port 3001");
-});
-
 
 
 
@@ -875,7 +871,7 @@ const fetchNumber3rdRankedGames =  async (userId) => {
 const getTokenFromUserId = (userId) => {
   return new Promise((resolve, reject) => {
     const payload = { userId }; // Create a payload object
-    jwt.sign(payload, SECRET_KEY, (err, token) => {
+    jwt.sign(payload, config.SECRET_KEY, (err, token) => {
       if (err) {
         return reject(err);
       }
@@ -955,11 +951,10 @@ app.post("/signup", async (req, res) => {
     const insertResult = await runQuery('INSERT INTO Users (first_name, last_name, username, email, phone_number, password, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)', 
     [first_name, last_name, username, email, phone_number, hashedPassword, invitation_code]);
     const user_id = insertResult.insertId;
-
+    console.log(user_id);
     await runQuery('UPDATE Referrals SET is_used = 1, status = "accepted" WHERE referral_code = ?', [invitation_code]);
 
-    const token = jwt.sign({ userId: user_id }, config.SECRET_KEY);
-
+    const token = jwt.sign({ userId: user_id }, SECRET_KEY);
     res.send({ message: 'Account created successfully', token: token });
   } catch (error) {
     console.error('Error creating account:', error);
@@ -1455,7 +1450,8 @@ async function validatePassword(password, hashedPassword) {
 */
 
 app.listen(3001, () => {
-  console.log("local host server running")
+  console.log("local host server running port 3001")
 });
+
 
 main();
